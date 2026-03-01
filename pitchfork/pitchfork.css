@@ -1,0 +1,423 @@
+/* ============================================================
+   PITCHFORK — built-in styles (pitchfork.css)
+   User styles in styles.css override these via CSS variables.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; width: 100%; overflow: hidden; }
+
+/* MARK: CSS variable defaults (overridable in styles.css) */
+:root {
+  --pf-bg:            #ffffff;
+  --pf-fg:            #111111;
+  --pf-accent:        #0055ff;
+  --pf-muted:         #888888;
+  --pf-border:        #e0e0e0;
+  --pf-font-body:     system-ui, sans-serif;
+  --pf-font-code:     'JetBrains Mono', 'Fira Code', monospace;
+  --pf-font-notes:    'Atkinson Hyperlegible', system-ui, sans-serif;
+  --pf-font-size:     clamp(1rem, 2.5vw, 2rem);
+  --pf-strip-height:  180px;
+  --pf-thumb-width:   240px;
+}
+
+/* MARK: Shared base */
+body {
+  background: var(--pf-bg);
+  color: var(--pf-fg);
+  font-family: var(--pf-font-body);
+  font-size: var(--pf-font-size);
+  line-height: 1.5;
+}
+
+img {
+  width: 100%;
+  height: auto;
+}
+
+code, pre {
+  font-family: var(--pf-font-code);
+}
+
+strong {
+  color: var(--pf-accent);
+}
+
+a, a:link, a:visited {
+  color: var(--pf-accent);
+}
+a:hover, a:focus, a:active {
+  color: var(--pf-fg);
+  background: var(--pf-accent);
+  text-decoration: none;
+}
+
+pre {
+  background: #1e1e1e;
+  border-radius: 0.4em;
+  padding: 1em;
+  overflow: auto;
+  font-size: 0.8em;
+}
+
+/* MARK: Slide layouts */
+.slide-layout {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  gap: 0.75em;
+}
+
+.slide-layout h1 { font-size: clamp(1.8rem, 5vw, 4rem); line-height: 1.1; }
+.slide-layout h2 { font-size: clamp(1.2rem, 3vw, 2.2rem); line-height: 1.2; color: var(--pf-accent); }
+.slide-layout h3 { font-size: clamp(1rem, 2vw, 1.6rem); }
+.slide-layout p, .slide-layout li { font-size: clamp(0.9rem, 2vw, 1.5rem); }
+.slide-layout ul, .slide-layout ol { padding-left: 1.5em; }
+
+/* title: centered */
+.slide-layout.title {
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+}
+
+/* section: centered, accent color */
+.slide-layout.section {
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  background: var(--pf-accent);
+  color: #fff;
+}
+.slide-layout.section h1, .slide-layout.section h2 { color: #fff; }
+
+/* code: tighter padding, pre takes most space */
+.slide-layout.code { justify-content: flex-start; padding-top: 2rem; }
+.slide-layout.code pre { width: 100%; flex: 1; font-size: clamp(0.7rem, 1.5vw, 1.1rem); }
+
+/* two-column */
+.slide-layout.two-column { justify-content: flex-start; }
+.slide-layout.two-column .slide-preamble { width: 100%; }
+.slide-layout.two-column .columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2em;
+  width: 100%;
+  flex: 1;
+  align-items: start;
+}
+.slide-layout.two-column .columns .col-left,
+.slide-layout.two-column .columns .col-right { height: 100%; }
+
+/* image-right */
+.slide-layout.image-right {
+  flex-direction: row;
+  align-items: center;
+  gap: 2em;
+}
+.slide-layout.image-right .image-text { flex: 1; }
+.slide-layout.image-right .image-img { flex: 1; }
+.slide-layout.image-right img { height: auto; border-radius: 0.5em; }
+
+/* blank */
+.slide-layout.blank { padding: 0; }
+
+
+/* MARK: VIEW: SLIDES (/slides) */
+.view-slides { overflow: hidden; }
+
+#slide-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+#slide-content {
+  width: 100%;
+  height: 100%;
+}
+
+#draw-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  z-index: 100;
+}
+
+#slide-logo {
+  position: fixed;
+  bottom: 1rem;
+  left: 1.5rem;
+  height: 2rem;
+  width: auto;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 50;
+}
+
+#slide-counter {
+  position: fixed;
+  bottom: 1rem;
+  right: 1.5rem;
+  font-size: 0.75rem;
+  color: var(--pf-muted);
+  font-family: var(--pf-font-code);
+  opacity: 0.5;
+}
+
+
+/* MARK: VIEW: NOTES (/notes) */
+.view-notes {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#strip-container {
+  height: var(--pf-strip-height);
+  border-bottom: 1px solid var(--pf-border);
+  background: var(--pf-muted);
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+}
+
+#strip {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  height: 100%;
+  align-items: center;
+}
+
+.thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--pf-thumb-width);
+  height: calc(var(--pf-strip-height) - 1.5rem);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--pf-bg);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  transition: border-color 0.15s;
+}
+
+.thumb.active {
+  border-color: var(--pf-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pf-accent) 20%, transparent);
+}
+
+.thumb:hover:not(.active) { border-color: var(--pf-muted); }
+
+.thumb-inner {
+  position: absolute;
+  inset: 0;
+  transform-origin: top left;
+  transform: scale(0.2);
+  width: 500%;
+  height: 500%;
+  pointer-events: none;
+  overflow: hidden;
+  font-size: 0.3rem;
+}
+
+.thumb-num {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 0.65rem;
+  color: var(--pf-muted);
+  font-family: var(--pf-font-code);
+  background: rgba(255,255,255,0.8);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+#notes-panel {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.notes-entry {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--pf-border);
+  transition: opacity 0.2s;
+  font-family: var(--pf-font-notes);
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+  line-height: 1.75;
+}
+
+.notes-entry:last-child { border-bottom: none; }
+
+.notes-entry.dimmed { opacity: 0.3; }
+
+.notes-entry-label {
+  font-size: 0.65rem;
+  font-family: var(--pf-font-code);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--pf-accent);
+  margin-bottom: 0.5rem;
+}
+
+.notes-entry.dimmed .notes-entry-label { color: var(--pf-muted); }
+
+.notes-entry ul, .notes-entry ol { padding-left: 1.5em; }
+.notes-entry li { margin-bottom: 0.35em; }
+.notes-empty { color: var(--pf-muted); font-style: italic; }
+
+/* Task list checkboxes (pymdownx.tasklist output). Make checked items strike-through. */
+.task-list-item { list-style: none; }
+.task-list-item input[type="checkbox"] {
+  margin-right: 0.5em;
+  transform: translateY(0.05em);
+  cursor: pointer;
+}
+.task-list-item label { cursor: pointer; }
+
+/* Broad selector using :has (modern browsers) to strike-through the whole li when it
+   contains a checked checkbox (covers <label><input>Text</label> patterns). */
+.task-list-item:has(input[type="checkbox"]:checked) {
+  text-decoration:line-through;
+  color: var(--pf-muted);
+}
+
+/* Keep a visual affordance: pointer cursor on label and hover */
+.task-list-item label,
+.task-list-item label *,
+.task-list-item:hover {
+  cursor: pointer;
+}
+
+/* Make labels and their contents show pointer cursor on hover */
+.task-list-item label,
+.task-list-item label *,
+.task-list-item:hover {
+  cursor: pointer;
+}
+
+
+/* MARK: VIEW: PRESENTER (/presenter) */
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap');
+
+.view-presenter {
+  overflow: hidden;
+  height: 100vh;
+}
+
+#presenter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 60vh 1fr;
+  grid-template-areas:
+    "current  next"
+    "meta     notes";
+  height: 100vh;
+  gap: 0;
+}
+
+#pres-current { grid-area: current; border-right: 1px solid var(--pf-border); border-bottom: 1px solid var(--pf-border); position: relative; overflow: hidden; }
+#pres-next    { grid-area: next;    border-bottom: 1px solid var(--pf-border); opacity: 0.7; position: relative; overflow: hidden; }
+#pres-meta    { grid-area: meta;    border-right: 1px solid var(--pf-border); padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; background: #f9f9f9; }
+#pres-notes   { grid-area: notes;   overflow-y: auto; display: flex; flex-direction: column; }
+
+.pres-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--pf-muted);
+  font-family: var(--pf-font-code);
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid var(--pf-border);
+  z-index: 10;
+}
+
+.pres-slide-frame {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* push content down so it doesn't sit under the label */
+  padding-top: 1.6rem;
+  box-sizing: border-box;
+}
+
+/* MARK: Scrollable all-notes list */
+.pres-notes-entry {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--pf-border);
+  transition: opacity 0.2s;
+  font-family: var(--pf-font-notes);
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+  line-height: 1.75;
+}
+
+.pres-notes-entry:last-child { border-bottom: none; }
+
+.pres-notes-entry.dimmed {
+  opacity: 0.3;
+}
+
+.pres-notes-entry-label {
+  font-size: 0.65rem;
+  font-family: var(--pf-font-code);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--pf-accent);
+  margin-bottom: 0.5rem;
+}
+
+.pres-notes-entry.dimmed .pres-notes-entry-label {
+  color: var(--pf-muted);
+}
+
+.pres-notes-entry ul, .pres-notes-entry ol { padding-left: 1.5em; }
+.pres-notes-entry li { margin-bottom: 0.35em; }
+.notes-empty { color: var(--pf-muted); font-style: italic; }
+
+#pres-counter {
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  font-family: var(--pf-font-code);
+  color: var(--pf-fg);
+}
+
+#pres-timer {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-family: var(--pf-font-code);
+  font-weight: bold;
+  color: var(--pf-accent);
+  letter-spacing: 0.05em;
+}
+
+#timer-controls { display: flex; gap: 0.5rem; }
+
+#timer-controls button {
+  padding: 0.35em 0.9em;
+  border: 1px solid var(--pf-border);
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: var(--pf-font-body);
+  transition: background 0.1s;
+}
+#timer-controls button:hover { background: var(--pf-accent); color: white; border-color: var(--pf-accent); }
+
+.end-marker { color: var(--pf-muted); font-style: italic; text-align: center; margin-top: 2rem; }
