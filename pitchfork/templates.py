@@ -269,7 +269,7 @@ function render() {
   if (activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 
   const activeEntry = document.querySelector('.notes-entry:not(.dimmed)');
-  if (activeEntry) activeEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (activeEntry) activeEntry.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 document.addEventListener('keydown', (e) => {
