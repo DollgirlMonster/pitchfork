@@ -340,7 +340,7 @@ pre {
 
 #pres-current { grid-area: current; border-right: 1px solid var(--pf-border); border-bottom: 1px solid var(--pf-border); position: relative; overflow: hidden; }
 #pres-next    { grid-area: next;    border-bottom: 1px solid var(--pf-border); opacity: 0.7; position: relative; overflow: hidden; }
-#pres-meta    { grid-area: meta;    border-right: 1px solid var(--pf-border); padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; background: #f9f9f9; }
+#pres-meta    { grid-area: meta;    border-right: 1px solid var(--pf-border); padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; background: var(--pf-muted); }
 #pres-notes   { grid-area: notes;   overflow-y: auto; display: flex; flex-direction: column; }
 
 .pres-label {
@@ -412,7 +412,7 @@ pre {
   font-size: clamp(2rem, 4vw, 3rem);
   font-family: var(--pf-font-code);
   font-weight: bold;
-  color: var(--pf-accent);
+  color: var(--pf-fg);
   letter-spacing: 0.05em;
 }
 
