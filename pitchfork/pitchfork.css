@@ -233,12 +233,14 @@ pre {
   position: absolute;
   inset: 0;
   transform-origin: top left;
-  transform: scale(0.2);
-  width: 500%;
-  height: 500%;
+
+  /* Scale up slide content to fill thumbnail */
+  transform: scale(0.5);
+  width: 200%;
+  height: 200%;
+
   pointer-events: none;
   overflow: hidden;
-  font-size: 0.3rem;
 }
 
 .thumb-num {
