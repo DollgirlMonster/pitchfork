@@ -4,7 +4,7 @@ Write slides in Markdown, present in the browser. Easy as.
 
 If this software is useful, please donate! I can't live without you.
 [Support Monthly](https://patreon.com/ellieonline)
-[One-Off Donation](http://ko-fi.com/ellieonline)
+[One-Off Donation](https://ko-fi.com/ellieonline)
 
 ## Install
 

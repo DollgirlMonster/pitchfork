@@ -125,13 +125,13 @@ Pitchfork will pick image-right without needing the explicit tag.
 </div>
 
 - [Support Monthly](https://patreon.com/ellieonline)
-- [One-Off Donation](http://ko-fi.com/ellieonline)
+- [One-Off Donation](https://ko-fi.com/ellieonline)
 
 %%%
 If Pitchfork improves your workflow, please donate! I can't live without you.
 
 - [Support Monthly](https://patreon.com/ellieonline)
-- [One-Off Donation](http://ko-fi.com/ellieonline)
+- [One-Off Donation](https://ko-fi.com/ellieonline)
 """
 
 
@@ -321,7 +321,7 @@ PITCHFORK :: Bullshit-Free Slides
 
 If Pitchfork improves your workflow, please consider donating! I can't live without you.
    Support Monthly:  https://patreon.com/ellieonline
-   One-Off Donation: http://ko-fi.com/ellieonline
+   One-Off Donation: https://ko-fi.com/ellieonline
 """)
 
     if args.command == "init":
