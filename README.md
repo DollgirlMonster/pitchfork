@@ -115,6 +115,10 @@ Override CSS variables or add your own rules:
 }
 ```
 
+### Logo
+
+You can add a logo to your deck for a touch of subtle branding. Simply place a file called `logo.png` in the slide deck directory's root, and Pitchfork will display it at low opacity in the bottom-left corner of each slide.
+
 ## CLI reference
 
 ```
