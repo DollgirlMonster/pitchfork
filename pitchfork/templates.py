@@ -162,13 +162,26 @@ resizeCanvas();
 
 bindInteractiveGuard();
 
+// Track all spawned popup windows so they can be closed when this tab closes.
+const _spawnedWindows = [];
+
+function _openPopup(url, name, features) {
+  const win = window.open(url, name, features);
+  if (win) _spawnedWindows.push(win);
+  return win;
+}
+
+window.addEventListener('beforeunload', () => {
+  _spawnedWindows.forEach(w => { try { if (w && !w.closed) w.close(); } catch (e) {} });
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Backspace')  { clearCanvas(); return; }
   if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); navigate(current + 1); }
   if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp'   || e.key === 'k') navigate(current - 1);
-  if (e.key === 'p') window.open('/presenter', 'Presenter View', 'location,status,scrollbars,resizable,width=1080,height=720');
-  if (e.key === 'n') window.open('/notes', 'Notes View', 'location,status,scrollbars,resizable,width=680,height=1080');
-  if (e.key === 't') window.open('/timer', 'Timer', 'width=300,height=240');
+  if (e.key === 'p') _openPopup('/presenter', 'Presenter View', 'location,status,scrollbars,resizable,width=1080,height=720');
+  if (e.key === 'n') _openPopup('/notes', 'Notes View', 'location,status,scrollbars,resizable,width=680,height=1080');
+  if (e.key === 't') _openPopup('/timer', 'Timer', 'width=300,height=240');
 });
 
 render();
