@@ -152,7 +152,7 @@ pitchfork export <file.md>       Export to PDF (requires playwright)
 
 ## Export
 
-Pitchfork can export your deck to PDF (via Playwright). (TODO: or as a self-contained HTML folder with local assets)
+Pitchfork can export your deck to PDF (via Playwright), or a self-contained HTML folder
 
 - PDF export (requires Playwright + Chromium):
 
@@ -164,10 +164,10 @@ pitchfork export talk.md
 
 This writes `talk.pdf` next to your source file.
 
-- HTML folder export (Not finished yet):
+- HTML file export:
 
 ```bash
 pitchfork export talk.md --html
 ```
 
-This creates a folder named `talk.export/` containing `index.html` plus `pitchfork.css` and `styles.css` (if present). Open `talk.export/index.html` in a browser to view or share or whatever.
+This creates a totally self-contained `talk.html/` which includes images, CSS, and JS

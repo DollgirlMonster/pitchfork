@@ -45,6 +45,7 @@ DEFAULT_SIDECAR = """\
 default_layout = "body"
 
 [export]
+# Pixel dimensions of each slide. PDFs are exported at 192 DPI, so 1920x1080 -> 10" x 5.625"
 resolution = "1920x1080"
 """
 
@@ -312,7 +313,7 @@ def main():
     # export
     p_export = sub.add_parser("export", help="Export deck to PDF or HTML")
     p_export.add_argument("file", help="Deck .md file")
-    p_export.add_argument("--html", action="store_true", help="Export as self-contained HTML (DOES NOT WORK YET)")
+    p_export.add_argument("--html", action="store_true", help="Export as self-contained HTML")
 
     args = parser.parse_args()
 
