@@ -62,40 +62,6 @@ Content here. Layout is auto-detected.
 
 Easy, huh?
 
-## Custom Layout Files
-
-Drop a `layoutname.py` file into a `_layouts/` folder with your deck. It MUST include two functions:
-
-```python
-# _layouts/big-number.py
-
-def match(slide) -> bool:
-    """Return True to claim this slide."""
-    """Returns `True` when there are no zones and the trimmed content is numeric, allowing a trailing `%`."""
-    content = slide.content.strip().removesuffix("%").strip()
-    return slide.zones == [] and content.isdigit()
-
-def html(slide, md) -> str:
-    """Return an HTML string. md() converts markdown → HTML."""
-    return f'<div class="slide-layout" style="font-size: 4rem;">{md(slide.content)}</div>'
-```
-
-`slide.content` is the slide body, `slide.zones` holds `::zone::` regions, `slide.notes` holds speaker notes.
-
-Sidecar layouts take priority over built-ins. A file at `_layouts/body.py` replaces the built-in `body` layout.
-
-## Auto-Detected Layouts
-
-| Content | Layout |
-|---|---|
-| Only headings (≤2) | `title` |
-| Only a single heading | `section` |
-| `::left::` / `::right::` zones | `two-column` |
-| Mostly code blocks | `code` |
-| Image + text | `image-right` |
-| Everything else | `body` (or `default_layout` from `.pitchfork`) |
-
-
 ## Views
 
 | URL | Description |
@@ -138,6 +104,39 @@ Override CSS variables or add your own rules:
 
 You can add a logo to your deck for a touch of subtle branding. Simply place a file called `logo.png` in the slide deck directory's root, and Pitchfork will display it at low opacity in the bottom-left corner of each slide.
 
+## Custom Layout Files
+
+Drop a `layoutname.py` file into a `_layouts/` folder with your deck. It MUST include two functions:
+
+```python
+# _layouts/big-number.py
+
+def match(slide) -> bool:
+    """Return True to claim this slide."""
+    """Returns `True` when there are no zones and the trimmed content is numeric, allowing a trailing `%`."""
+    content = slide.content.strip().removesuffix("%").strip()
+    return slide.zones == [] and content.isdigit()
+
+def html(slide, md) -> str:
+    """Return an HTML string. md() converts markdown → HTML."""
+    return f'<div class="slide-layout" style="font-size: 4rem;">{md(slide.content)}</div>'
+```
+
+`slide.content` is the slide body, `slide.zones` holds `::zone::` regions, `slide.notes` holds speaker notes.
+
+Sidecar layouts take priority over built-ins. A file at `_layouts/body.py` replaces the built-in `body` layout.
+
+## Auto-Detected Layouts
+
+| Content | Layout |
+|---|---|
+| Only headings (≤2) | `title` |
+| Only a single heading | `section` |
+| `::left::` / `::right::` zones | `two-column` |
+| Mostly code blocks | `code` |
+| Image + text | `image-right` |
+| Everything else | `body` (or `default_layout` from `.pitchfork`) |
+
 ## CLI reference
 
 ```
@@ -170,4 +169,4 @@ This writes `talk.pdf` next to your source file.
 pitchfork export talk.md --html
 ```
 
-This creates a totally self-contained `talk.html/` which includes images, CSS, and JS
+This writes a self-contained `talk.html` which includes images, CSS, and JS
