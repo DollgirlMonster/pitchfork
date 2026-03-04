@@ -31,7 +31,7 @@ const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   if (msg.type === 'navigate') { current = msg.index; clearCanvas(); render(); }
-  if (msg.type === 'reload') { location.hash = '#' + current; location.reload(); }
+  if (msg.type === 'reload') { _reloading = true; location.hash = '#' + current; location.reload(); }
 };
 
 function navigate(idx) {
@@ -164,6 +164,7 @@ bindInteractiveGuard();
 
 // Track all spawned popup windows so they can be closed when this tab closes.
 const _spawnedWindows = [];
+let _reloading = false;
 
 function _openPopup(url, name, features) {
   const win = window.open(url, name, features);
@@ -172,6 +173,7 @@ function _openPopup(url, name, features) {
 }
 
 window.addEventListener('beforeunload', () => {
+  if (_reloading) return;
   _spawnedWindows.forEach(w => { try { if (w && !w.closed) w.close(); } catch (e) {} });
 });
 
