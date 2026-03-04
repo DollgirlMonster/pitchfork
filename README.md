@@ -63,7 +63,26 @@ Content here. Layout is auto-detected.
 Easy, huh?
 
 ## Custom Layout Files
-Documentation in-progress
+
+Drop a `layoutname.py` file into a `_layouts/` folder with your deck. It MUST include two functions:
+
+```python
+# _layouts/big-number.py
+
+def match(slide) -> bool:
+    """Return True to claim this slide."""
+    """Returns `True` when there are no zones and the trimmed content is numeric, allowing a trailing `%`."""
+    content = slide.content.strip().removesuffix("%").strip()
+    return slide.zones == [] and content.isdigit()
+
+def html(slide, md) -> str:
+    """Return an HTML string. md() converts markdown → HTML."""
+    return f'<div class="slide-layout" style="font-size: 4rem;">{md(slide.content)}</div>'
+```
+
+`slide.content` is the slide body, `slide.zones` holds `::zone::` regions, `slide.notes` holds speaker notes.
+
+Sidecar layouts take priority over built-ins. A file at `_layouts/body.py` replaces the built-in `body` layout.
 
 ## Auto-Detected Layouts
 
