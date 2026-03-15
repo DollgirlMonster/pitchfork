@@ -40,6 +40,15 @@ code, pre {
   font-family: var(--pf-font-code);
 }
 
+/* Inline code styling */
+code {
+  color: var(--pf-accent);
+  font-family: var(--pf-font-code);
+  background: rgba(255 255 255 / 0.1);
+  padding: 0.1em 0.2em;
+  border-radius: 0.2em;
+}
+
 strong {
   color: var(--pf-accent);
 }
@@ -58,7 +67,7 @@ pre {
   border-radius: 0.4em;
   padding: 1em;
   overflow: auto;
-  font-size: 0.8em;
+  font-size: 0.6em;
 }
 
 /* MARK: Slide layouts */
@@ -99,7 +108,7 @@ pre {
 
 /* code: tighter padding, pre takes most space */
 .slide-layout.code { justify-content: flex-start; padding-top: 2rem; }
-.slide-layout.code pre { width: 100%; flex: 1; min-height: 0; font-size: clamp(0.7rem, 1.5vw, 1.1rem); }
+.slide-layout.code pre { width: 100%; flex: 1; min-height: 0; font-size: clamp(0.6rem, 1.5vw, 1.0rem); }
 
 /* prevent code blocks from overflowing slide bounds in any layout */
 .slide-layout pre {
