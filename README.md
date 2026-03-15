@@ -66,7 +66,7 @@ Easy, huh?
 
 | URL | Description |
 |---|---|
-| `/slides` | Fullscreen current slide. `←`/`→` or `j`/`k` to navigate. `p` opens presenter view, `n` opens notes view, `t` pops out a timer widget. |
+| `/slides` | Fullscreen current slide. `←`/`→` or `j`/`k` to navigate. `p` opens presenter view, `n` opens notes view, `t` pops out a timer widget; see below for more info. |
 | `/notes` | Slide strip + full notes panel. Synced with slides view. |
 | `/presenter` | Current slide, next slide, notes, and stopwatch. |
 
@@ -170,3 +170,24 @@ pitchfork export talk.md --html
 ```
 
 This writes a self-contained `talk.html` which includes images, CSS, and JS
+
+## Timer Widget
+
+The `/timer` endpoint now supports an optional `duration` query parameter to set the initial countdown time. You can use flexible time formats:
+
+- `?duration=5m30s` — 5 minutes, 30 seconds
+- `?duration=5m` — 5 minutes
+- `?duration=100s` — 100 seconds
+- `?duration=50m30s` — 50 minutes, 30 seconds
+
+Example:
+
+```
+::left::
+# Timer example
+
+::right::
+<iframe src="/timer?duration=15m" style="height:200px"></iframe>
+```
+
+If not provided, the timer defaults to 5 minutes. You can also type these formats directly into the timer input.

@@ -16,6 +16,33 @@ from websockets.server import WebSocketServerProtocol
 logger = logging.getLogger(__name__)
 
 
+def parse_duration(s: Optional[str]) -> Optional[int]:
+    """Parse flexible duration strings for the timer endpoint.
+
+    Supports formats like "5m30s", "5m", "100s", and plain seconds.
+    Returns the total number of seconds, or None if parsing fails.
+    """
+    if not s:
+        return None
+    import re
+    s = s.strip().lower()
+    total = 0
+    pattern = r"^(?:(\d+)m)?(?:(\d+)s)?$"
+    m = re.match(pattern, s)
+    if m:
+        mins, secs = m.groups()
+        if mins:
+            total += int(mins) * 60
+        if secs:
+            total += int(secs)
+        if total > 0:
+            return total
+    try:
+        return int(s)
+    except Exception:
+        return None
+
+
 class PitchforkServer:
     def __init__(
         self,
@@ -109,8 +136,7 @@ class PitchforkServer:
         if not candidate.is_file():
             return None
 
-        ct = MIME_TYPES.get(candidate.suffix.lower(), "application/octet-stream")
-        return candidate.read_bytes(), ct
+        return candidate.read_bytes(), MIME_TYPES.get(candidate.suffix.lower(), "application/octet-stream")
 
     async def _http_handler(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -127,7 +153,19 @@ class PitchforkServer:
         try:
             request_line = raw.decode("utf-8", errors="replace").split("\r\n")[0]
             parts = request_line.split()
-            path = parts[1].split("?")[0] if len(parts) >= 2 else "/"
+            full_path = parts[1] if len(parts) >= 2 else "/"
+            if "?" in full_path:
+                path, query = full_path.split("?", 1)
+            else:
+                path, query = full_path, ""
+            query_params = {}
+            if query:
+                for pair in query.split("&"):
+                    if "=" in pair:
+                        k, v = pair.split("=", 1)
+                        query_params[k] = v
+                    else:
+                        query_params[pair] = ""
         except Exception:
             writer.close()
             await writer.wait_closed()
@@ -142,7 +180,17 @@ class PitchforkServer:
         }
 
         if path in page_routes:
-            body = self._inject(page_routes[path])
+            if path == "/timer":
+                default_seconds = parse_duration(query_params.get("duration"))
+                html = TIMER_PAGE
+                inject_str = f"<script>window.TIMER_DEFAULT_SECONDS = {default_seconds if default_seconds is not None else 'null'};</script>"
+                if "<head>" in html:
+                    html = html.replace("<head>", "<head>" + inject_str, 1)
+                else:
+                    html = html.replace("<body", f"<body>{inject_str}", 1)
+                body = self._inject(html)
+            else:
+                body = self._inject(page_routes[path])
             ct = "text/html"
         else:
             result = self._serve_static(path)

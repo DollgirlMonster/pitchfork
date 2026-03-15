@@ -553,9 +553,35 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// initialize with default '5' minutes (show 5:00 but don't prefill edit buffer)
+// Enhanced parseTime to support 'XmYs' syntax (e.g., 5m30s, 5m, 100s, 50m30s)
+function parseFlexibleTime(str) {
+  str = (str || '').trim().toLowerCase();
+  if (!str) return 0;
+  let total = 0;
+  // Match e.g. 5m30s, 100s, 5m, 50m30s
+  const re = /^(?:(\d+)m)?(?:(\d+)s)?$/;
+  const match = re.exec(str);
+  if (match) {
+    const m = match[1], s = match[2];
+    if (m) total += parseInt(m, 10) * 60;
+    if (s) total += parseInt(s, 10);
+    if (total > 0) return total;
+  }
+  // fallback: try as integer seconds
+  const asInt = parseInt(str, 10);
+  if (!isNaN(asInt)) return asInt;
+  return 0;
+}
+
+// override parseTime to use flexible parser
+parseTime = parseFlexibleTime;
+
 editBuffer = '';
-timerSeconds = 5 * 60;
+if (typeof window.TIMER_DEFAULT_SECONDS === 'number' && !isNaN(window.TIMER_DEFAULT_SECONDS)) {
+  timerSeconds = window.TIMER_DEFAULT_SECONDS;
+} else {
+  timerSeconds = 5 * 60;
+}
 initialSeconds = timerSeconds;
 updateDisplay();
 // autofocus removed: don't steal focus when timer is opened
