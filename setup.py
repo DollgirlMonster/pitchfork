@@ -4,7 +4,12 @@ setup(
     name="pitchfork",
     version="0.2.2",
     packages=find_packages(),
-    package_data={"pitchfork": ["pitchfork.css"]},
+    package_data={
+        "pitchfork": [
+            "pitchfork.css",
+            "layouts/*.py",
+        ]
+    },
     install_requires=[
         "markdown",
         "pymdown-extensions",

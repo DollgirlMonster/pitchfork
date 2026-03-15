@@ -10,7 +10,7 @@ If this software is useful, please donate! I can't live without you.
 
 ```bash
 cd /path/to/pitchfork
-pip install -e .
+pip install .
 ```
 
 ## Quickstart
