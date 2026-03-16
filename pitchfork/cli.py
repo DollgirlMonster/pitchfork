@@ -4,6 +4,7 @@ Pitchfork CLI — serve, init, new, export
 import argparse
 import asyncio
 import json
+import re
 import sys
 import webbrowser
 from pathlib import Path
@@ -136,12 +137,19 @@ If Pitchfork improves your workflow, please donate! I can't live without you.
 """
 
 
+def _natural_sort_key(s: str):
+    # Sort strings naturally, e.g. "Week 2" before "Week 10".
+    parts = re.split(r"(\d+)", s)
+    return [int(p) if p.isdigit() else p.lower() for p in parts]
+
+
 def find_deck(cwd: Path) -> Optional[Path]:
     """Find a .md file in a Pitchfork project dir."""
     sidecar = cwd / ".pitchfork"
     if not sidecar.exists():
         return None
     mds = list(cwd.glob("*.md"))
+    mds.sort(key=lambda p: _natural_sort_key(p.name))
     if len(mds) == 1:
         return mds[0]
     if len(mds) > 1:
