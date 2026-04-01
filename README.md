@@ -58,7 +58,8 @@ Content here. Layout is auto-detected.
 
 **Slide breaks:** `---` on its own line  
 **Notes delimiter:** `%%%` on its own line — everything until the next `---` is notes  
-**Explicit layout override:** `# slide: <layout>` as the first line of a slide
+**Explicit layout override:** `# slide: <layout>` as the first line of a slide  
+**Chapter marker:** `<!-- MARK: Chapter Title -->` placed anywhere before a `---` — tags the following slide as the start of a new chapter
 
 Easy, huh?
 
@@ -67,10 +68,35 @@ Easy, huh?
 | URL | Description |
 |---|---|
 | `/slides` | Fullscreen current slide. `←`/`→` or `j`/`k` to navigate. `p` opens presenter view, `n` opens notes view, `t` pops out a timer widget; see below for more info. |
-| `/notes` | Slide strip + full notes panel. Synced with slides view. |
-| `/presenter` | Current slide, next slide, notes, and stopwatch. |
+| `/notes` | Slide strip + full notes panel. Synced with slides view. Press `c` to open the chapter jump menu. |
+| `/presenter` | Current slide, next slide, notes, and stopwatch. Press `c` to open the chapter jump menu. |
 
 All views stay in sync via WebSocket.
+
+## Chapters
+
+Add `<!-- MARK: Chapter Title -->` comments to your deck to define chapters. Place the comment anywhere in a slide's block — it will tag the *next* slide as the opening of that chapter.
+
+```markdown
+<!-- MARK: Introduction -->
+
+---
+
+## Why plain text?
+
+- Version controllable
+- Fast to write
+
+---
+
+<!-- MARK: Demo -->
+
+---
+
+## Live Demo
+```
+
+In the notes and presenter views, a `§ Chapter Title` indicator appears at the top of the notes panel showing your current position. Press `c` in either view to open the chapter jump menu, where you can click or press a number key to jump directly to any chapter. The jump syncs across all open views via WebSocket.
 
 ## Sidecar — `.pitchfork`
 
