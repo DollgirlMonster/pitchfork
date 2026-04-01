@@ -60,16 +60,21 @@ _MEASURE_SCALE_JS = """
         p.style.wordBreak = 'break-word';
     });
 
+    // Temporarily make overflow visible so scrollWidth/scrollHeight reflect true content size.
+    const prevSlide = slide.style.overflow;
+    const prevInner = inner.style.overflow;
     slide.style.overflow = 'visible';
     inner.style.overflow = 'visible';
 
-    const scaleW = inner.clientWidth  / inner.scrollWidth;
-    const scaleH = inner.clientHeight / inner.scrollHeight;
-    slide.style.overflow = '';
+    const scaleW = slide.clientWidth  / inner.scrollWidth;
+    const scaleH = slide.clientHeight / inner.scrollHeight;
+
+    slide.style.overflow = prevSlide;
+    inner.style.overflow = prevInner;
 
     const fit = Math.min(1.0, scaleW, scaleH);
-    // Ignore sub-pixel rounding differences and minor overflows.
-    return fit >= 0.92 ? 1.0 : Math.max(fit, 0.1);
+    // Ignore sub-pixel rounding differences.
+    return fit >= 0.98 ? 1.0 : Math.max(fit, 0.1);
 }
 """
 
@@ -105,8 +110,6 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
     default_layout = dk_cfg.get("default_layout", "body")
     resolution     = ex_cfg.get("resolution", "1920x1080")
     dpi            = float(ex_cfg.get("dpi", 96.0))
-    # Non-overflow slides are upscaled by this factor for a comfortable reading size.
-    cozy_scale     = float(ex_cfg.get("cozy_scale", 1.15))
 
     try:
         w, h = map(int, resolution.split("x"))
@@ -135,10 +138,13 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
         -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
     .export-slide {{ position: relative; box-sizing: border-box;
         width: 100vw; height: 100vh; overflow: hidden; }}
+    .export-slide .slide-layout {{ max-width: 100%; box-sizing: border-box; }}
+    .export-slide * {{ max-width: 100%; box-sizing: border-box; }}
     .export-slide pre, .export-slide code {{
         white-space: pre-wrap !important;
         word-break: break-word !important;
         overflow-wrap: anywhere !important; }}
+    .export-slide table {{ width: 100% !important; table-layout: fixed; }}
     .slide-logo {{ position: fixed; bottom: 1rem; left: 1.5rem;
         height: 2rem; width: auto; opacity: 0.15; pointer-events: none; z-index: 50; }}
     .slide-counter {{ position: fixed; bottom: 1rem; right: 1.5rem;
@@ -168,6 +174,16 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
         overlay  = (f'<img id="slide-logo" src="{logo_uri}" alt="logo">' if logo_uri else "")
         overlay += f'<div id="slide-counter">1 / {total}</div>'
 
+        html_nav_css = """
+        .export-slide { display: none; }
+        .export-slide.active { display: block; }
+        #slide-logo { position: fixed; bottom: 1rem; left: 1.5rem;
+            height: 2rem; width: auto; opacity: 0.15; pointer-events: none; z-index: 50; }
+        #slide-counter { position: fixed; bottom: 1rem; right: 1.5rem;
+            font-size: 0.75rem; color: var(--pf-muted, #666);
+            font-family: var(--pf-font-code, monospace); opacity: 0.5; }
+        """
+
         nav_script = """<script>
 (function(){
   const slides = Array.from(document.querySelectorAll('.export-slide'));
@@ -181,8 +197,8 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
   };
   document.addEventListener('keydown', e => {
     if (e.target.matches('input,textarea')) return;
-    if (['ArrowRight','PageDown',' '].includes(e.key))  { e.preventDefault(); show(idx + 1); }
-    if (['ArrowLeft','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); show(idx - 1); }
+    if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key))  { e.preventDefault(); show(idx + 1); }
+    if (['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); show(idx - 1); }
   });
   show(0);
 })();
@@ -194,7 +210,7 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
             f'<meta charset="utf-8">'
             f'<meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<title>{deck_path.name} — Export</title>'
-            f'{head_tags}<style>{full_css}</style>'
+            f'{head_tags}<style>{full_css}\n{html_nav_css}</style>'
             f'</head><body>\n{slides_html}\n{overlay}\n{nav_script}\n</body></html>',
             encoding="utf-8",
         )
@@ -233,7 +249,6 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
                 )
                 try:
                     page.emulate_media(media="print")
-                    page.evaluate("document.body.style.zoom = '100%';")
                     page.wait_for_function("window.__pf_highlight_done === true", timeout=2000)
                 except Exception:
                     pass
@@ -243,16 +258,22 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
                     print(f"  Slide {i + 1}: scale {scale:.4f}")
 
                 if scale < 0.999:
-                    # Overflow: shrink to fit using body zoom so the content
-                    # scales down in-flow without clipping at the viewport edge.
+                    # Overflow: shrink the slide to fit within the page.
+                    # We scale the .export-slide element itself using CSS transform
+                    # with transform-origin: top left, then shift it to center it.
+                    # This avoids body.zoom which incorrectly shifts content rightward.
                     percent = int(round(scale * 100))
                     scaled_slides.append((i + 1, percent))
                     print(f"  Slide {i + 1}: overflow, shrunk to {percent}%")
-                    page.evaluate(f"document.body.style.zoom = '{scale}';")
-                else:
-                    # Normal: cozy upscale for comfortable reading size.
-                    # zoom scales content in-flow (no overflow clipping).
-                    page.evaluate(f"document.body.style.zoom = '{cozy_scale}';")
+                    offset_x = round((1.0 - scale) * w / 2, 2)
+                    offset_y = round((1.0 - scale) * h / 2, 2)
+                    page.evaluate(
+                        f"""
+                        const el = document.querySelector('.export-slide');
+                        el.style.transformOrigin = 'top left';
+                        el.style.transform = 'scale({scale}) translate({offset_x / scale}px, {offset_y / scale}px)';
+                        """
+                    )
 
                 tmp_pdf = os.path.join(tmpdir, f"slide-{i:03}.pdf")
                 page.pdf(path=tmp_pdf, print_background=True, prefer_css_page_size=True)
