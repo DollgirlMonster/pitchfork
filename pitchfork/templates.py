@@ -197,11 +197,22 @@ NOTES_PAGE = _HEAD.format(title="Pitchfork — Notes") + """
   <div id="strip"></div>
 </div>
 <div id="notes-panel">
+  <div id="chapter-indicator"></div>
   <div id="notes-list"></div>
+</div>
+
+<!-- Chapter jump overlay -->
+<div id="chapter-overlay">
+  <div id="chapter-overlay-inner">
+    <div id="chapter-overlay-title">Jump to Chapter</div>
+    <div id="chapter-list"></div>
+    <div id="chapter-overlay-hint">click or press number key &middot; c or esc to close</div>
+  </div>
 </div>
 
 <script>
 const slides = __SLIDES_JSON__;
+const chapters = __CHAPTERS_JSON__;
 let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
 
 const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
@@ -215,6 +226,16 @@ function navigate(idx) {
   current = Math.max(0, Math.min(slides.length - 1, idx));
   render();
   ws.send(JSON.stringify({ type: 'navigate', index: current }));
+}
+
+// ── Chapter utilities ─────────────────────────────────────────
+function currentChapterTitle() {
+  let title = null;
+  for (const ch of chapters) {
+    if (ch.index <= current) title = ch.title;
+    else break;
+  }
+  return title;
 }
 
 function buildStrip() {
@@ -253,17 +274,14 @@ function _makeTasklistsInteractive(root) {
   if (!root) root = document;
   root.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     try { cb.disabled = false; } catch (e) {}
-    // initialize class based on checked state
     const li = cb.closest('li');
     if (li) li.classList.toggle('task-checked', cb.checked);
     cb.addEventListener('change', (e) => {
       const li = e.target.closest('li');
       if (li) li.classList.toggle('task-checked', e.target.checked);
     });
-    // allow clicking the list item or label to toggle checkbox when label markup varies
     if (li) {
       li.addEventListener('click', (ev) => {
-        // don't double-toggle if the actual input was clicked
         if (ev.target === cb) return;
         cb.checked = !cb.checked;
         cb.dispatchEvent(new Event('change', { bubbles: true }));
@@ -285,9 +303,65 @@ function render() {
 
   const activeEntry = document.querySelector('.notes-entry:not(.dimmed)');
   if (activeEntry) activeEntry.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Chapter indicator
+  const indicator = document.getElementById('chapter-indicator');
+  const title = currentChapterTitle();
+  if (title) {
+    indicator.textContent = '\u00a7 ' + title;
+    indicator.style.display = '';
+  } else {
+    indicator.style.display = 'none';
+  }
 }
 
+function openChapterOverlay() {
+  if (!chapters.length) return;
+  const list = document.getElementById('chapter-list');
+  list.innerHTML = '';
+  chapters.forEach((ch, i) => {
+    const item = document.createElement('div');
+    item.className = 'chapter-item';
+    const num = document.createElement('span');
+    num.className = 'chapter-item-num';
+    num.textContent = i + 1;
+    const ttl = document.createElement('span');
+    ttl.className = 'chapter-item-title';
+    ttl.textContent = ch.title;
+    const slideNum = document.createElement('span');
+    slideNum.className = 'chapter-item-slide';
+    slideNum.textContent = 'slide ' + (ch.index + 1);
+    item.appendChild(num);
+    item.appendChild(ttl);
+    item.appendChild(slideNum);
+    item.addEventListener('click', () => { closeChapterOverlay(); navigate(ch.index); });
+    list.appendChild(item);
+  });
+  overlay.classList.add('open');
+}
+
+function closeChapterOverlay() {
+  overlay.classList.remove('open');
+}
+
+const overlay = document.getElementById('chapter-overlay');
+
+overlay.addEventListener('click', (e) => {
+  if (e.target === overlay) closeChapterOverlay();
+});
+
 document.addEventListener('keydown', (e) => {
+  if (overlay.classList.contains('open')) {
+    if (e.key === 'Escape' || e.key === 'c') { closeChapterOverlay(); return; }
+    const n = parseInt(e.key);
+    if (!isNaN(n) && n >= 1 && n <= chapters.length) {
+      closeChapterOverlay();
+      navigate(chapters[n - 1].index);
+      return;
+    }
+    return; // swallow other keys while overlay is open
+  }
+  if (e.key === 'c') { openChapterOverlay(); return; }
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'j' || e.key === ' ') navigate(current + 1);
   if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp'   || e.key === 'k') navigate(current - 1);
 });
@@ -295,6 +369,7 @@ document.addEventListener('keydown', (e) => {
 buildStrip();
 buildNotesList();
 render();
+document.getElementById('chapter-indicator').addEventListener('click', openChapterOverlay);
 _makeTasklistsInteractive(document.getElementById('notes-list'));
 </script>
 </body></html>
@@ -313,6 +388,7 @@ PRESENTER_PAGE = _HEAD.format(title="Pitchfork — Presenter") + """
   </div>
   <div id="pres-meta">
     <div id="pres-counter"></div>
+    <div id="pres-chapter"></div>
     <div id="pres-timer">00:00</div>
     <div id="timer-controls">
       <button onclick="startTimer()">Start</button>
@@ -325,8 +401,18 @@ PRESENTER_PAGE = _HEAD.format(title="Pitchfork — Presenter") + """
   </div>
 </div>
 
+<!-- Chapter jump overlay -->
+<div id="chapter-overlay">
+  <div id="chapter-overlay-inner">
+    <div id="chapter-overlay-title">Jump to Chapter</div>
+    <div id="chapter-list"></div>
+    <div id="chapter-overlay-hint">click or press number key &middot; c or esc to close</div>
+  </div>
+</div>
+
 <script>
 const slides = __SLIDES_JSON__;
+const chapters = __CHAPTERS_JSON__;
 let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
 let timerSeconds = 0, timerInterval = null;
 
@@ -341,6 +427,16 @@ function navigate(idx) {
   current = Math.max(0, Math.min(slides.length - 1, idx));
   render();
   ws.send(JSON.stringify({ type: 'navigate', index: current }));
+}
+
+// ── Chapter utilities ─────────────────────────────────────────
+function currentChapterTitle() {
+  let title = null;
+  for (const ch of chapters) {
+    if (ch.index <= current) title = ch.title;
+    else break;
+  }
+  return title;
 }
 
 function buildNotesList() {
@@ -390,6 +486,16 @@ function render() {
   document.getElementById('pres-counter').textContent = (current + 1) + ' / ' + slides.length;
   document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
 
+  // Chapter indicator
+  const chapterEl = document.getElementById('pres-chapter');
+  const title = currentChapterTitle();
+  if (title) {
+    chapterEl.textContent = '\u00a7 ' + title;
+    chapterEl.style.display = '';
+  } else {
+    chapterEl.style.display = 'none';
+  }
+
   // Update dimming
   document.querySelectorAll('.pres-notes-entry').forEach(entry => {
     const isCurrent = parseInt(entry.dataset.index) === current;
@@ -415,7 +521,54 @@ function startTimer() {
 function pauseTimer() { clearInterval(timerInterval); timerInterval = null; }
 function resetTimer() { pauseTimer(); timerSeconds = 0; document.getElementById('pres-timer').textContent = '00:00'; }
 
+// ── Chapter jump overlay ──────────────────────────────────────
+const overlay = document.getElementById('chapter-overlay');
+
+function openChapterOverlay() {
+  if (!chapters.length) return;
+  const list = document.getElementById('chapter-list');
+  list.innerHTML = '';
+  chapters.forEach((ch, i) => {
+    const item = document.createElement('div');
+    item.className = 'chapter-item';
+    const num = document.createElement('span');
+    num.className = 'chapter-item-num';
+    num.textContent = i + 1;
+    const ttl = document.createElement('span');
+    ttl.className = 'chapter-item-title';
+    ttl.textContent = ch.title;
+    const slideNum = document.createElement('span');
+    slideNum.className = 'chapter-item-slide';
+    slideNum.textContent = 'slide ' + (ch.index + 1);
+    item.appendChild(num);
+    item.appendChild(ttl);
+    item.appendChild(slideNum);
+    item.addEventListener('click', () => { closeChapterOverlay(); navigate(ch.index); });
+    list.appendChild(item);
+  });
+  overlay.classList.add('open');
+}
+
+function closeChapterOverlay() {
+  overlay.classList.remove('open');
+}
+
+overlay.addEventListener('click', (e) => {
+  if (e.target === overlay) closeChapterOverlay();
+});
+
 document.addEventListener('keydown', (e) => {
+  if (overlay.classList.contains('open')) {
+    if (e.key === 'Escape' || e.key === 'c') { closeChapterOverlay(); return; }
+    const n = parseInt(e.key);
+    if (!isNaN(n) && n >= 1 && n <= chapters.length) {
+      closeChapterOverlay();
+      navigate(chapters[n - 1].index);
+      return;
+    }
+    return; // swallow other keys while overlay is open
+  }
+  if (e.key === 'c') { openChapterOverlay(); return; }
   if (e.key === 'ArrowRight' || e.key === 'j' || e.key === ' ') navigate(current + 1);
   if (e.key === 'ArrowLeft'  || e.key === 'k') navigate(current - 1);
   if (e.key === 't') window.open('/timer', '_blank');
@@ -423,6 +576,7 @@ document.addEventListener('keydown', (e) => {
 
 buildNotesList();
 render();
+document.getElementById('pres-chapter').addEventListener('click', openChapterOverlay);
 _makeTasklistsInteractivePres(document.getElementById('pres-notes-list'));
 </script>
 </body></html>

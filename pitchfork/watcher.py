@@ -11,7 +11,7 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent
 from watchdog.observers import Observer
 
 from pitchfork.parser import parse_deck
-from pitchfork.renderer import init_layouts, slides_to_json_payload
+from pitchfork.renderer import init_layouts, slides_to_json_payload, chapters_json_payload
 
 DEBOUNCE_SECONDS = 0.15
 
@@ -58,6 +58,7 @@ class DeckChangeHandler(FileSystemEventHandler):
             source = self.deck_path.read_text(encoding="utf-8")
             slides = parse_deck(source, self.server.default_layout)
             self.server.set_slides_json(json.dumps(slides_to_json_payload(slides)))
+            self.server.set_chapters_json(json.dumps(chapters_json_payload(slides)))
             asyncio.run_coroutine_threadsafe(
                 self.server.broadcast({"type": "reload"}),
                 self.loop,

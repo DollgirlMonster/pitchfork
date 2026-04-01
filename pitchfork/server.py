@@ -57,6 +57,7 @@ class PitchforkServer:
         self.port = port
         self.clients: Set[WebSocketServerProtocol] = set()
         self.slides_json: str = "[]"
+        self.chapters_json: str = "[]"
         self.default_layout: str = "body"
         self._css_dir = Path(__file__).parent
 
@@ -64,6 +65,9 @@ class PitchforkServer:
 
     def set_slides_json(self, slides_json: str) -> None:
         self.slides_json = slides_json
+
+    def set_chapters_json(self, chapters_json: str) -> None:
+        self.chapters_json = chapters_json
 
     async def broadcast(self, message: dict) -> None:
         if not self.clients:
@@ -101,6 +105,7 @@ class PitchforkServer:
         """Inject runtime values into an HTML template."""
         return (
             html.replace("__SLIDES_JSON__", self.slides_json)
+               .replace("__CHAPTERS_JSON__", self.chapters_json)
                .replace("__WS_PORT__", str(self.port + 1))
                .encode("utf-8")
         )

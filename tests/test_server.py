@@ -37,9 +37,11 @@ class TestServerStatic(unittest.TestCase):
 
     def test_inject_replaces_tokens(self):
         self.server.set_slides_json("[{}]")
-        html = "<html>__SLIDES_JSON__ __WS_PORT__</html>"
+        self.server.set_chapters_json('[{"index":0,"title":"Intro"}]')
+        html = "<html>__SLIDES_JSON__ __CHAPTERS_JSON__ __WS_PORT__</html>"
         out = self.server._inject(html)
         self.assertIn(b"[{}]", out)
+        self.assertIn(b'"Intro"', out)
         self.assertIn(b"1235", out)  # port + 1
 
     def test_serve_static_styles_css(self):

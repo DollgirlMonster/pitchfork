@@ -13,6 +13,7 @@ class Slide:
     content: str
     notes: str
     zones: Dict[str, str] = field(default_factory=dict)
+    chapter: Optional[str] = None
 
 
 def detect_layout(content: str, zones: dict) -> Optional[str]:
@@ -73,10 +74,41 @@ def parse_zones(content: str) -> Tuple[str, Dict[str, str]]:
     return preamble, zones
 
 
+def extract_marks(source: str) -> List[Tuple[int, str]]:
+    """Return a list of (char_offset, title) for every <!-- MARK: ... --> comment.
+
+    The offset points to the start of the comment so it can be compared against
+    the character positions of each raw slide chunk after splitting on ``---``.
+    """
+    mark_pattern = re.compile(r"<!--\s*MARK:\s*(.+?)\s*-->")
+    return [(m.start(), m.group(1)) for m in mark_pattern.finditer(source)]
+
+
 def parse_deck(source: str, default_layout: str = "body") -> List[Slide]:
     """Parse a full .md deck string into a list of Slide objects."""
+    # Pre-pass: collect MARK positions before any splitting modifies offsets.
+    marks = extract_marks(source)
+
     # Split on slide breaks (--- on its own line)
     raw_slides = re.split(r"^\s*---\s*$", source, flags=re.MULTILINE)
+
+    # Build chunk start offsets by walking separator matches in the source.
+    # chunk_offsets[i] is the character position where raw_slides[i] begins.
+    chunk_offsets: List[int] = [0]
+    for m in re.finditer(r"^\s*---\s*$", source, flags=re.MULTILINE):
+        chunk_offsets.append(m.end())
+
+    # For each MARK, find which raw chunk it lives in and attach the chapter
+    # title to that same slide. The MARK comment sits inside the slide body
+    # it names, not before the separator that precedes it.
+    # Last MARK in a chunk wins if there are multiple.
+    mark_for_chunk: dict = {}
+    for mark_offset, mark_title in marks:
+        for i, start in enumerate(chunk_offsets):
+            end = chunk_offsets[i + 1] if i + 1 < len(chunk_offsets) else len(source)
+            if start <= mark_offset < end:
+                mark_for_chunk[i] = mark_title
+                break
 
     slides = []
     for i, raw in enumerate(raw_slides):
@@ -110,6 +142,7 @@ def parse_deck(source: str, default_layout: str = "body") -> List[Slide]:
             content=content,
             notes=notes,
             zones=zones,
+            chapter=mark_for_chunk.get(i),
         ))
 
     return slides

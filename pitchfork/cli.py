@@ -246,7 +246,7 @@ def cmd_new(args):
 
 def cmd_serve(args):
     from pitchfork.parser import parse_deck
-    from pitchfork.renderer import slides_to_json_payload
+    from pitchfork.renderer import slides_to_json_payload, chapters_json_payload
     from pitchfork.server import PitchforkServer
     from pitchfork.watcher import start_watcher
 
@@ -275,10 +275,12 @@ def cmd_serve(args):
     source = deck_path.read_text(encoding="utf-8")
     slides = parse_deck(source, default_layout)
     slides_json = json.dumps(slides_to_json_payload(slides))
+    chapters_json = json.dumps(chapters_json_payload(slides))
 
     server = PitchforkServer(deck_path, css_path, host="localhost", port=port)
     server.default_layout = default_layout
     server.set_slides_json(slides_json)
+    server.set_chapters_json(chapters_json)
 
     print(f"\n   On Deck — {deck_path.name} ({len(slides)} slides)")
 

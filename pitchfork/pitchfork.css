@@ -266,9 +266,27 @@ pre {
 
 #notes-panel {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+#chapter-indicator {
+  font-family: var(--pf-font-code);
+  font-size: 0.75rem;
+  color: var(--pf-accent);
+  letter-spacing: 0.06em;
+  padding: 0.4rem 1.5rem;
+  border-bottom: 1px solid var(--pf-border);
+  background: var(--pf-bg);
+  flex-shrink: 0;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+#notes-list {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .notes-entry {
@@ -442,3 +460,95 @@ pre {
 #timer-controls button:hover { background: var(--pf-accent); color: white; border-color: var(--pf-accent); }
 
 .end-marker { color: var(--pf-muted); font-style: italic; text-align: center; margin-top: 2rem; }
+
+/* ── Chapter indicator (presenter) ─────────────────────────── */
+
+#pres-chapter {
+  font-family: var(--pf-font-code);
+  font-size: 0.7rem;
+  color: white;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+/* ── Chapter jump overlay ───────────────────────────────────── */
+
+#chapter-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: oklch(10% 0.01 240 / 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+
+#chapter-overlay.open {
+  display: flex;
+}
+
+#chapter-overlay-inner {
+  background: var(--pf-bg);
+  border: 1px solid var(--pf-border);
+  border-radius: 10px;
+  padding: 1.5rem 2rem;
+  min-width: 360px;
+  max-width: 560px;
+  width: 90vw;
+  box-shadow: 0 8px 32px oklch(0% 0 0 / 0.3);
+}
+
+#chapter-overlay-title {
+  font-family: var(--pf-font-code);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pf-muted);
+  margin-bottom: 1rem;
+}
+
+#chapter-overlay-hint {
+  font-family: var(--pf-font-code);
+  font-size: 0.65rem;
+  color: var(--pf-muted);
+  margin-top: 1rem;
+  opacity: 0.7;
+}
+
+.chapter-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.chapter-item:hover {
+  background: oklch(from var(--pf-accent) l c h / 0.08);
+}
+
+.chapter-item-num {
+  font-family: var(--pf-font-code);
+  font-size: 0.7rem;
+  color: var(--pf-accent);
+  min-width: 1.2rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.chapter-item-title {
+  font-family: var(--pf-font-body);
+  font-size: 1rem;
+  color: var(--pf-fg);
+  flex: 1;
+}
+
+.chapter-item-slide {
+  font-family: var(--pf-font-code);
+  font-size: 0.65rem;
+  color: var(--pf-muted);
+  flex-shrink: 0;
+}

@@ -61,6 +61,16 @@ def slides_to_json_payload(slides: List[Slide]) -> List[Dict]:
             "layout": s.layout,
             "html": render_slide_html(s),
             "notes": render_notes_html(s),
+            "chapter": s.chapter,
         }
         for s in slides
+    ]
+
+
+def chapters_json_payload(slides: List[Slide]) -> List[Dict]:
+    """Return a compact [{index, title}] list for slides that open a new chapter."""
+    return [
+        {"index": s.index, "title": s.chapter}
+        for s in slides
+        if s.chapter is not None
     ]
