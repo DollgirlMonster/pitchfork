@@ -129,9 +129,15 @@ pre {
   width: 100%;
   flex: 1;
   align-items: start;
+  align-content: center;
 }
 .slide-layout.two-column .columns .col-left,
-.slide-layout.two-column .columns .col-right { height: 100%; }
+.slide-layout.two-column .columns .col-right {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 
 /* image-right */
 .slide-layout.image-right {
