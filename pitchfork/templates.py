@@ -20,11 +20,16 @@ SLIDES_PAGE = _HEAD.format(title="Pitchfork — Slides") + """
   <div id="slide-content"></div>
   <canvas id="draw-canvas"></canvas>
   <img id="slide-logo" src="/logo.png" alt="" onerror="this.style.display='none'">
-  <div id="slide-counter"></div>
+  <div id="slide-chapter-strip">
+    <span id="slide-counter-inline"></span>
+    <span id="slide-chapter-current"></span>
+    <span id="slide-chapter-upcoming"></span>
+  </div>
 </div>
 
 <script>
 const slides = __SLIDES_JSON__;
+const chapters = __CHAPTERS_JSON__;
 let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
 
 const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
@@ -41,11 +46,49 @@ function navigate(idx) {
   ws.send(JSON.stringify({ type: 'navigate', index: current }));
 }
 
+function currentChapterIndex() {
+  let idx = -1;
+  for (let i = 0; i < chapters.length; i++) {
+    if (chapters[i].index <= current) idx = i;
+    else break;
+  }
+  return idx;
+}
+
+function renderChapterStrip() {
+  const chIdx = currentChapterIndex();
+
+  document.getElementById('slide-counter-inline').textContent =
+    (current + 1) + '/' + slides.length;
+
+  const upcomingEl = document.getElementById('slide-chapter-upcoming');
+  upcomingEl.innerHTML = '';
+
+  if (chapters.length === 0) {
+    document.getElementById('slide-chapter-current').textContent = '';
+    return;
+  }
+
+  const chCurrent = chIdx >= 0 ? chapters[chIdx] : null;
+  document.getElementById('slide-chapter-current').textContent =
+    chCurrent ? '§ ' + chCurrent.title : '';
+
+  const upcoming = chapters.slice(chIdx + 1);
+  const minOpacity = 0.18;
+  upcoming.forEach((ch, i) => {
+    const span = document.createElement('span');
+    span.className = 'slide-chapter-upcoming-item';
+    span.textContent = ch.title;
+    span.style.opacity = i === 0 ? minOpacity * 1.6 : minOpacity;
+    upcomingEl.appendChild(span);
+  });
+}
+
 function render() {
   const slide = slides[current];
   document.getElementById('slide-content').innerHTML = slide.html;
-  document.getElementById('slide-counter').textContent = (current + 1) + ' / ' + slides.length;
   document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+  renderChapterStrip();
 }
 
 // ── Drawing ──────────────────────────────────────────────────
