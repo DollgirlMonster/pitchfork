@@ -196,8 +196,7 @@ pre {
   gap: 1rem;
   padding: 0.6rem 1.5rem 0.7rem;
   font-family: var(--pf-font-code);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  font-size: 1rem;
   pointer-events: none;
   z-index: 50;
   /* fade rightward before reaching logo zone (~4rem from right) */
@@ -210,13 +209,13 @@ pre {
 
 #slide-counter-inline {
   color: var(--pf-muted);
-  opacity: 0.55;
+  opacity: 0.65;
   flex-shrink: 0;
 }
 
 #slide-chapter-current {
   color: var(--pf-muted);
-  opacity: 0.55;
+  opacity: 0.75;
   flex-shrink: 0;
 }
 
