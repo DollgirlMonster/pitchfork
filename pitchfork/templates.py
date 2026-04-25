@@ -12,9 +12,62 @@ _HEAD = """<!DOCTYPE html>
 <link rel="stylesheet" href="/pitchfork.css">
 <link rel="stylesheet" href="/styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// Shared QR renderer: renders .pf-qr placeholders into QR canvases and
+// re-runs on resize or DOM changes. Exposed as `window.pfRenderQRs()`.
+(function(){
+  function pfRenderQRs(root) {
+    try {
+      root = root || document;
+      const nodes = root.querySelectorAll('.pf-qr');
+      nodes.forEach(node => {
+        const value = node.dataset.value || '';
+        const rect = node.getBoundingClientRect();
+        const clientW = Math.floor(node.clientWidth || 0);
+        const clientH = Math.floor(node.clientHeight || 0);
+        const availW = clientW || Math.floor(rect.width || 0);
+        const availH = clientH || Math.floor(rect.height || 0);
+        if ((!availW && !availH) || (availW < 16 && availH < 16)) return;
+        let size = 0;
+        if (availW && availH) size = Math.max(16, Math.min(availW, availH));
+        else size = Math.max(16, availW || availH || 16);
+        if (node.dataset.renderedSize && parseInt(node.dataset.renderedSize, 10) === size) return;
+        node.innerHTML = '';
+        try {
+          new QRCode(node, { text: value, width: size, height: size, colorDark: '#000000', colorLight: '#ffffff' });
+          node.dataset.renderedSize = String(size);
+        } catch (e) {
+          node.innerHTML = '';
+          const a = document.createElement('a');
+          a.href = value;
+          a.textContent = value;
+          node.appendChild(a);
+        }
+      });
+    } catch (e) { console.error('pfRenderQRs', e); }
+  }
+  window.pfRenderQRs = pfRenderQRs;
+
+  // Debounced resize -> re-run rendering so QR fills new space
+  let _pfQrResizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (_pfQrResizeTimer) clearTimeout(_pfQrResizeTimer);
+    _pfQrResizeTimer = setTimeout(() => { try { pfRenderQRs(); } catch(e){} }, 150);
+  });
+
+  // Observe DOM changes and re-render when placeholders are added
+  const _pfQrObserver = new MutationObserver((mutationsList) => {
+    for (const m of mutationsList) {
+      if (m.addedNodes && m.addedNodes.length) { pfRenderQRs(); break; }
+    }
+  });
+  try { _pfQrObserver.observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {}
+})();
+</script>
 </head>"""
 
-SLIDES_PAGE = _HEAD.format(title="Pitchfork — Slides") + """
+SLIDES_PAGE = _HEAD.replace("{title}", "Pitchfork — Slides") + """
 <body class="view-slides">
 <div id="slide-container">
   <div id="slide-content"></div>
@@ -88,6 +141,7 @@ function render() {
   const slide = slides[current];
   document.getElementById('slide-content').innerHTML = slide.html;
   document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+  if (window.pfRenderQRs) pfRenderQRs(document.getElementById('slide-content'));
   renderChapterStrip();
 }
 
@@ -234,7 +288,7 @@ render();
 </body></html>
 """
 
-NOTES_PAGE = _HEAD.format(title="Pitchfork — Notes") + """
+NOTES_PAGE = _HEAD.replace("{title}", "Pitchfork — Notes") + """
 <body class="view-notes">
 <div id="strip-container">
   <div id="strip"></div>
@@ -292,6 +346,7 @@ function buildStrip() {
     thumb.addEventListener('click', () => navigate(i));
     strip.appendChild(thumb);
   });
+  if (window.pfRenderQRs) pfRenderQRs(strip);
 }
 
 function buildNotesList() {
@@ -310,6 +365,7 @@ function buildNotesList() {
     entry.appendChild(body);
     list.appendChild(entry);
   });
+  if (window.pfRenderQRs) pfRenderQRs(list);
 }
 
 // Make tasklist checkboxes interactive in notes (no persistence).
@@ -418,7 +474,7 @@ _makeTasklistsInteractive(document.getElementById('notes-list'));
 </body></html>
 """
 
-PRESENTER_PAGE = _HEAD.format(title="Pitchfork — Presenter") + """
+PRESENTER_PAGE = _HEAD.replace("{title}", "Pitchfork — Presenter") + """
 <body class="view-presenter">
 <div id="presenter-grid">
   <div id="pres-current">
@@ -498,6 +554,7 @@ function buildNotesList() {
     entry.appendChild(body);
     list.appendChild(entry);
   });
+  if (window.pfRenderQRs) pfRenderQRs(list);
 }
 
 // Make tasklist checkboxes interactive in presenter notes (no persistence).
@@ -528,6 +585,8 @@ function render() {
   document.getElementById('pres-next-slide').innerHTML = next ? next.html : '<div class="end-marker">End of deck</div>';
   document.getElementById('pres-counter').textContent = (current + 1) + ' / ' + slides.length;
   document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+  if (window.pfRenderQRs) pfRenderQRs(document.getElementById('pres-current-slide'));
+  if (window.pfRenderQRs) pfRenderQRs(document.getElementById('pres-next-slide'));
 
   // Chapter indicator
   const chapterEl = document.getElementById('pres-chapter');
@@ -625,7 +684,7 @@ _makeTasklistsInteractivePres(document.getElementById('pres-notes-list'));
 </body></html>
 """
 
-TIMER_PAGE = _HEAD.format(title="Pitchfork — Timer") + """
+TIMER_PAGE = _HEAD.replace("{title}", "Pitchfork — Timer") + """
 <body class="view-timer">
 <div id="timer-root" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:12px;padding:24px;">
   <div style="display:flex;gap:8px;align-items:center;">

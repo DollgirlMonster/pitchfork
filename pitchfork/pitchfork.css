@@ -592,3 +592,22 @@ pre {
   color: var(--pf-muted);
   flex-shrink: 0;
 }
+
+/* QR placeholders rendered by client-side script */
+.pf-qr {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  max-height: 100%;
+  border: 0.5rem solid #fff;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #fff;
+}
+.pf-qr canvas, .pf-qr img {
+  display: block;
+  width: 100%;
+  height: auto;
+}

@@ -5,6 +5,8 @@ Layout selection is handled by layout_loader.
 from pathlib import Path
 from typing import Dict, List
 
+import re
+import html
 import markdown
 from pitchfork.layout_loader import Layout, load_layouts, pick_layout
 from pitchfork.parser import Slide
@@ -28,29 +30,52 @@ def init_layouts(deck_path: Path) -> None:
 
 def md(text: str) -> str:
     """Convert markdown to HTML."""
+    if not text:
+        return ""
     return markdown.markdown(
         text,
         extensions=["fenced_code", "tables", "nl2br", "sane_lists", "pymdownx.tasklist"],
     )
 
 
+_MD_QR_ANCHOR_RE = re.compile(
+    r'(?i)<a\b[^>]*href=("|\')(?P<href>.*?)(?:\1)[^>]*>\s*(?:<(?:strong|b)>)?\s*qr\s*(?:</(?:strong|b)>)?\s*</a>'
+)
+
+
+def replace_qr_placeholders(html_text: str) -> str:
+    """Replace `<a ...>QR</a>` anchors with `.pf-qr` placeholders.
+
+    This is a separate step in the rendering pipeline so `md()` stays
+    focused on markdown → HTML conversion.
+    """
+
+    def _repl(m):
+        href = m.group('href').strip()
+        href_esc = html.escape(href, quote=True)
+        return f'<div class="pf-qr" data-value="{href_esc}" data-size="160"></div>'
+
+    return _MD_QR_ANCHOR_RE.sub(_repl, html_text)
+
+
 def render_slide_html(slide: Slide) -> str:
     """Render a slide's content area as an HTML fragment."""
     layout = pick_layout(_layouts, slide, explicit_name=slide.layout) or _body_layout
     try:
-        return layout.html(slide, md)
+        html_out = layout.html(slide, md)
+        return replace_qr_placeholders(html_out)
     except Exception as exc:
         return (
             f'<div class="slide-layout body error">'
             f"<p><strong>Layout error ({layout.name}):</strong> {exc}</p>"
-            f"{md(slide.content)}</div>"
+            f"{replace_qr_placeholders(md(slide.content))}</div>"
         )
 
 
 def render_notes_html(slide: Slide) -> str:
     if not slide.notes.strip():
         return '<div class="notes-empty">No notes for this slide.</div>'
-    return f'<div class="notes-content">{md(slide.notes)}</div>'
+    return f'<div class="notes-content">{replace_qr_placeholders(md(slide.notes))}</div>'
 
 
 def slides_to_json_payload(slides: List[Slide]) -> List[Dict]:
