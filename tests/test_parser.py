@@ -40,7 +40,28 @@ class TestParser(unittest.TestCase):
         self.assertIsNone(detect_layout("Just a bunch of text", {}))
 
     def test_parse_deck_explicit_layout_and_notes(self):
-        md = """# slide: code\n```\nprint('hi')\n```\n%%%\nNotes here\n"""
+        md = """::layout:code::
+```
+print('hi')
+```
+%%%
+Notes here
+"""
+        slides = parse_deck(md, default_layout="body")
+        self.assertEqual(len(slides), 1)
+        slide = slides[0]
+        self.assertEqual(slide.layout, "code")
+        self.assertIn("print('hi')", slide.content)
+        self.assertEqual(slide.notes, "Notes here")
+
+    def test_parse_deck_explicit_layout_and_notes_new_marker(self):
+        md = """::layout:code::
+```
+print('hi')
+```
+%%%
+Notes here
+"""
         slides = parse_deck(md, default_layout="body")
         self.assertEqual(len(slides), 1)
         slide = slides[0]

@@ -4,7 +4,8 @@ from pathlib import Path
 
 from pitchfork.exporter import (
     load_config,
-    _rewrite_local_images_to_data_uri,
+    _embed_local_images,
+    _MEASURE_SCALE_JS,
     export_deck,
 )
 
@@ -23,13 +24,13 @@ class TestExporter(unittest.TestCase):
             cfg = load_config(tmpdir / "deck.md")
             self.assertIn("deck", cfg)
 
-    def test_rewrite_local_images_to_data_uri(self):
+    def test_embed_local_images_to_data_uri(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             img = tmpdir / "img.png"
             img.write_bytes(b"PNGDATA")
             html = '<img src="img.png"> <img src="http://example.com/x.png">'
-            out = _rewrite_local_images_to_data_uri(html, tmpdir)
+            out = _embed_local_images(html, tmpdir)
             self.assertIn("data:image/png;base64", out)
             self.assertIn("http://example.com/x.png", out)
 
@@ -46,13 +47,12 @@ class TestExporter(unittest.TestCase):
             self.assertIn("<html", content)
             self.assertIn("Slide", content)
 
-    def test_overflow_shrink_js_uses_ratio_scaling(self):
-        from pitchfork.exporter import _OVERFLOW_SHRINK_JS
-        self.assertIn("inner.scrollWidth", _OVERFLOW_SHRINK_JS)
-        self.assertIn("inner.scrollHeight", _OVERFLOW_SHRINK_JS)
-        self.assertIn("clientW / scrollW", _OVERFLOW_SHRINK_JS)
-        self.assertIn("clientH / scrollH", _OVERFLOW_SHRINK_JS)
-        self.assertIn("minScale = 0.1", _OVERFLOW_SHRINK_JS)
+    def test_measure_scale_js_has_expected_tokens(self):
+        self.assertIn("inner.scrollWidth", _MEASURE_SCALE_JS)
+        self.assertIn("inner.scrollHeight", _MEASURE_SCALE_JS)
+        self.assertIn("scaleW", _MEASURE_SCALE_JS)
+        self.assertIn("scaleH", _MEASURE_SCALE_JS)
+        self.assertIn("Math.max(fit, 0.1)", _MEASURE_SCALE_JS)
 
     def test_export_css_wraps_pre_blocks(self):
         from pitchfork.exporter import export_deck
