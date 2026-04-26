@@ -34,7 +34,8 @@ pitchfork serve         # opens slides in the browser, live-reloads on updates
 ### Example:
 ```markdown
 ::layout:title::
-## Subtitle
+# Deck Title
+## Example Content
 
 - Slide content; text, images, whatever you like.
 
