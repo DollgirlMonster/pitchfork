@@ -77,7 +77,7 @@ You can also press 't' to open the timer in a pop-out window
 
 ---
 
-# slide: two-column
+::layout:two-column::
 
 ::left::
 ## Before
@@ -107,11 +107,11 @@ Choose from:
 
 ---
 
-# slide: image-right
+::layout:image-right::
 
 ## A picture is worth a thousand words
 
-Use `# slide: image-right` to place an image on the right.
+Use `::layout:image-right::` to place an image on the right.
 Images can be local files or remote URLs.
 
 ![placeholder](https://placehold.co/600x400)

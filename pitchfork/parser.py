@@ -120,12 +120,12 @@ def parse_deck(source: str, default_layout: str = "body") -> List[Slide]:
         slide_body = parts[0].strip()
         notes = parts[1].strip() if len(parts) > 1 else ""
 
-        # Check for explicit layout override: first line like "# slide: layout"
+        # Check for explicit layout override: first line like "::layout:name::"
         explicit_layout = None
-        layout_match = re.match(r"^#\s+slide:\s+(\S+)\s*$", slide_body, re.MULTILINE)
-        if layout_match:
-            explicit_layout = layout_match.group(1)
-            slide_body = slide_body[layout_match.end():].strip()
+        layout_marker = re.match(r"^::layout:([^\s:]+)::\s*$", slide_body, re.MULTILINE)
+        if layout_marker:
+            explicit_layout = layout_marker.group(1)
+            slide_body = slide_body[layout_marker.end():].strip()
 
         # Parse zone markers
         content, zones = parse_zones(slide_body)
