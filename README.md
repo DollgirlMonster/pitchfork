@@ -80,7 +80,7 @@ pitchfork serve [file.md]        Serve with live reload (auto-discovers if omitt
               [--port N]         HTTP port (default 1312; WS on port+1)
               [--no-open]        Don't open browser automatically
 pitchfork export <file.md>       Export to PDF (requires playwright)
-                 [--html]        Export as self-contained HTML folder (Doesn't work yet!!!)
+                 [--html]        Export as self-contained HTML folder
 ```
 
 ## Views
