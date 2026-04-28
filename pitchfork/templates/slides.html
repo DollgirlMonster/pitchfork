@@ -1,0 +1,218 @@
+<body class="view-slides">
+<div id="slide-container">
+  <div id="slide-content"></div>
+  <canvas id="draw-canvas"></canvas>
+  <img id="slide-logo" src="/logo.png" alt="" onerror="this.style.display='none'">
+  <div id="slide-chapter-strip">
+    <span id="slide-counter-inline"></span>
+    <span id="slide-chapter-current"></span>
+    <span id="slide-chapter-upcoming"></span>
+  </div>
+</div>
+
+<script>
+const slides = __SLIDES_JSON__;
+const chapters = __CHAPTERS_JSON__;
+let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
+
+const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
+ws.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+  if (msg.type === 'navigate') { current = msg.index; clearCanvas(); render(); }
+  if (msg.type === 'reload') { _reloading = true; location.hash = '#' + current; location.reload(); }
+};
+
+function navigate(idx) {
+  current = Math.max(0, Math.min(slides.length - 1, idx));
+  clearCanvas();
+  render();
+  ws.send(JSON.stringify({ type: 'navigate', index: current }));
+}
+
+function currentChapterIndex() {
+  let idx = -1;
+  for (let i = 0; i < chapters.length; i++) {
+    if (chapters[i].index <= current) idx = i;
+    else break;
+  }
+  return idx;
+}
+
+function renderChapterStrip() {
+  const chIdx = currentChapterIndex();
+
+  document.getElementById('slide-counter-inline').textContent =
+    (current + 1) + '/' + slides.length;
+
+  const upcomingEl = document.getElementById('slide-chapter-upcoming');
+  upcomingEl.innerHTML = '';
+
+  if (chapters.length === 0) {
+    document.getElementById('slide-chapter-current').textContent = '';
+    return;
+  }
+
+  const chCurrent = chIdx >= 0 ? chapters[chIdx] : null;
+  document.getElementById('slide-chapter-current').textContent =
+    chCurrent ? '§ ' + chCurrent.title : '';
+
+  const upcoming = chapters.slice(chIdx + 1);
+  const minOpacity = 0.18;
+  upcoming.forEach((ch, i) => {
+    const span = document.createElement('span');
+    span.className = 'slide-chapter-upcoming-item';
+    span.textContent = ch.title;
+    span.style.opacity = i === 0 ? minOpacity * 1.6 : minOpacity;
+    upcomingEl.appendChild(span);
+  });
+}
+
+function render() {
+  const slide = slides[current];
+  document.getElementById('slide-content').innerHTML = slide.html;
+  document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+  if (window.pfRenderQRs) pfRenderQRs(document.getElementById('slide-content'));
+  renderChapterStrip();
+}
+
+// ── Drawing ──────────────────────────────────────────────────
+const canvas = document.getElementById('draw-canvas');
+const ctx = canvas.getContext('2d');
+let drawing = false;
+let hasMoved = false;
+
+const cs = getComputedStyle(document.documentElement);
+function drawColor() { return cs.getPropertyValue('--pf-draw-color').trim() || '#ff3b30'; }
+function drawWidth() { return parseFloat(cs.getPropertyValue('--pf-draw-width')) || 4; }
+
+function resizeCanvas() {
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.putImageData(data, 0, 0);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+}
+
+// When interactive elements (iframes, videos, links, form controls) are hovered
+// or touched, disable pointer events on the drawing canvas so their controls
+// are clickable. Re-binds after slide content changes.
+function bindInteractiveGuard() {
+  const SELECTOR = 'iframe, video, audio, a, button, input, select, textarea';
+
+  // Check what's underneath the drawing canvas at a given point by
+  // temporarily disabling pointer-events on the canvas, querying
+  // elementFromPoint, then restoring pointer-events.
+  function elementUnderPoint(x, y) {
+    const prev = canvas.style.pointerEvents;
+    canvas.style.pointerEvents = 'none';
+    const el = document.elementFromPoint(x, y);
+    canvas.style.pointerEvents = prev;
+    return el;
+  }
+
+  function updateAtPoint(x, y) {
+    const el = elementUnderPoint(x, y);
+    const hit = el && el.closest && el.closest(SELECTOR);
+    if (hit) {
+      canvas.style.pointerEvents = 'none';
+    } else {
+      canvas.style.pointerEvents = '';
+    }
+  }
+
+  // Pointer movement (mouse/touch) drives the check
+  document.addEventListener('pointermove', (e) => {
+    updateAtPoint(e.clientX, e.clientY);
+  }, { passive: true });
+
+  document.addEventListener('touchstart', (e) => {
+    const t = e.touches && e.touches[0];
+    if (t) updateAtPoint(t.clientX, t.clientY);
+  }, { passive: true });
+
+  // Also check on click/press to ensure canvas stays disabled while
+  // interacting with the control until pointer moves away.
+  document.addEventListener('pointerdown', (e) => {
+    updateAtPoint(e.clientX, e.clientY);
+  }, true);
+
+  // Re-bind on DOM changes (new iframes / interactive elements may appear)
+  const container = document.getElementById('slide-content');
+  if (!container) return;
+  const obs = new MutationObserver(() => { /* no-op: pointer handlers check underlying elements */ });
+  obs.observe(container, { childList: true, subtree: true });
+}
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function getPos(e) {
+  if (e.touches) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  return { x: e.clientX, y: e.clientY };
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  drawing = true;
+  hasMoved = false;
+  const p = getPos(e);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  ctx.strokeStyle = drawColor();
+  ctx.lineWidth = drawWidth();
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!drawing) return;
+  hasMoved = true;
+  const p = getPos(e);
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (drawing && !hasMoved) {
+    const p = getPos(e);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, drawWidth() / 2, 0, Math.PI * 2);
+    ctx.fillStyle = drawColor();
+    ctx.fill();
+  }
+  drawing = false;
+});
+
+canvas.addEventListener('mouseleave', () => { drawing = false; });
+window.addEventListener('resize', resizeCanvas);
+
+resizeCanvas();
+
+bindInteractiveGuard();
+
+// Track all spawned popup windows so they can be closed when presenter view closes
+const _spawnedWindows = [];
+let _reloading = false;
+
+function _openPopup(url, name, features) {
+  const win = window.open(url, name, features);
+  if (win) _spawnedWindows.push(win);
+  return win;
+}
+
+window.addEventListener('beforeunload', () => {
+  if (_reloading) return;
+  _spawnedWindows.forEach(w => { try { if (w && !w.closed) w.close(); } catch (e) {} });
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Backspace')  { clearCanvas(); return; }
+  if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); navigate(current + 1); }
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp'   || e.key === 'k') navigate(current - 1);
+  if (e.key === 'p') _openPopup('/presenter', 'Presenter View', 'location,status,scrollbars,resizable,width=1080,height=720');
+  if (e.key === 'n') _openPopup('/notes', 'Notes View', 'location,status,scrollbars,resizable,width=680,height=1080');
+  if (e.key === 't') _openPopup('/timer', 'Timer', 'width=300,height=240');
+});
+
+render();
+</script>
+</body></html>

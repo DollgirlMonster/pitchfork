@@ -1,0 +1,156 @@
+<body class="view-timer">
+<div id="timer-root" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:12px;padding:24px;">
+  <div style="display:flex;gap:8px;align-items:center;">
+    <div id="timer-display" tabindex="0" role="textbox" aria-label="Timer input" style="padding:8px;font-size:72px;text-align:center;font-weight:600;color:var(--pf-accent);outline:none;box-shadow:none;">00:00</div>
+  </div>
+  <div id="timer-controls" style="display:flex;gap:8px;">
+    <button id="timer-start">Start</button>
+    <button id="timer-pause">Pause</button>
+    <button id="timer-reset">Reset</button>
+  </div>
+</div>
+
+<script>
+let timerSeconds = 0, timerInterval = null, initialSeconds = 0;
+const display = document.getElementById('timer-display');
+const btnStart = document.getElementById('timer-start');
+const btnPause = document.getElementById('timer-pause');
+const btnReset = document.getElementById('timer-reset');
+
+let editBuffer = '';
+
+function formatTime(s) {
+  const m = String(Math.floor(s / 60)).padStart(2, '0');
+  const sec = String(s % 60).padStart(2, '0');
+  return m + ':' + sec;
+}
+
+function updateDisplay() { display.textContent = formatTime(timerSeconds); }
+
+function parseTime(str) {
+  str = (str || '').trim();
+  if (!str) return 0;
+  if (str.indexOf(':') !== -1) {
+    const parts = str.split(':').map(p => p.trim());
+    const m = parseInt(parts[0]) || 0;
+    let s = parseInt(parts[1]) || 0;
+    s = Math.max(0, Math.min(59, s));
+    return m * 60 + s;
+  }
+  const m = parseInt(str) || 0;
+  return m * 60;
+}
+
+function setTimerFromBuffer() {
+  timerSeconds = parseTime(editBuffer);
+  initialSeconds = timerSeconds;
+  updateDisplay();
+  display.style.color = '';
+}
+
+function setDisplayBuffer(buf) {
+  editBuffer = (buf || '').trim();
+  // show typed form: if no colon, display as minutes:00
+  if (!editBuffer) {
+    display.textContent = '00:00';
+  } else if (editBuffer.indexOf(':') !== -1) {
+    const parts = editBuffer.split(':');
+    const m = parseInt(parts[0]) || 0;
+    let s = parseInt(parts[1]) || 0;
+    s = Math.max(0, Math.min(59, s));
+    display.textContent = String(m) + ':' + String(s).padStart(2, '0');
+  } else {
+    const m = parseInt(editBuffer) || 0;
+    display.textContent = String(m) + ':00';
+  }
+}
+
+function startTimer() {
+  if (timerSeconds <= 0) return;
+  if (timerInterval) return;
+  timerInterval = setInterval(() => {
+    timerSeconds--;
+    if (timerSeconds <= 0) {
+      timerSeconds = 0;
+      updateDisplay();
+      clearInterval(timerInterval);
+      timerInterval = null;
+      display.style.color = 'hsla(0, 60%, 60%)';
+      return;
+    }
+    updateDisplay();
+  }, 1000);
+}
+
+function pauseTimer() { clearInterval(timerInterval); timerInterval = null; }
+
+function resetTimer() { pauseTimer(); timerSeconds = initialSeconds || 0; updateDisplay(); document.body.style.backgroundColor = ''; }
+
+btnStart.addEventListener('click', startTimer);
+btnPause.addEventListener('click', pauseTimer);
+btnReset.addEventListener('click', resetTimer);
+
+// key handling for typing into the timer display
+document.addEventListener('keydown', (e) => {
+  // only handle simple keys: digits, colon, backspace, enter
+  if (/^[0-9]$/.test(e.key)) {
+    editBuffer += e.key;
+    setDisplayBuffer(editBuffer);
+    setTimerFromBuffer();
+    e.preventDefault();
+    return;
+  }
+  if (e.key === ':') {
+    if (!editBuffer.includes(':')) editBuffer = (editBuffer || '0') + ':';
+    setDisplayBuffer(editBuffer);
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'Backspace') {
+    editBuffer = editBuffer.slice(0, -1);
+    setDisplayBuffer(editBuffer);
+    setTimerFromBuffer();
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'Enter') {
+    setTimerFromBuffer();
+    startTimer();
+    e.preventDefault();
+    return;
+  }
+});
+
+// Enhanced parseTime to support 'XmYs' syntax (e.g., 5m30s, 5m, 100s, 50m30s)
+function parseFlexibleTime(str) {
+  str = (str || '').trim().toLowerCase();
+  if (!str) return 0;
+  let total = 0;
+  // Match e.g. 5m30s, 100s, 5m, 50m30s
+  const re = /^(?:(\d+)m)?(?:(\d+)s)?$/;
+  const match = re.exec(str);
+  if (match) {
+    const m = match[1], s = match[2];
+    if (m) total += parseInt(m, 10) * 60;
+    if (s) total += parseInt(s, 10);
+    if (total > 0) return total;
+  }
+  // fallback: try as integer seconds
+  const asInt = parseInt(str, 10);
+  if (!isNaN(asInt)) return asInt;
+  return 0;
+}
+
+// override parseTime to use flexible parser
+parseTime = parseFlexibleTime;
+
+editBuffer = '';
+if (typeof window.TIMER_DEFAULT_SECONDS === 'number' && !isNaN(window.TIMER_DEFAULT_SECONDS)) {
+  timerSeconds = window.TIMER_DEFAULT_SECONDS;
+} else {
+  timerSeconds = 5 * 60;
+}
+initialSeconds = timerSeconds;
+updateDisplay();
+</script>
+</body></html>

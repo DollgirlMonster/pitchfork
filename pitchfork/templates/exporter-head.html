@@ -1,0 +1,62 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+window.__pf_highlight_done = false;
+document.addEventListener("DOMContentLoaded", () => {
+    try {
+        if (window.hljs) hljs.highlightAll();
+    } finally {
+        window.__pf_highlight_done = true;
+    }
+});
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+window.__pf_qr_done = false;
+(function(){
+    function pfRenderQRs(root) {
+        try {
+            root = root || document;
+            const nodes = root.querySelectorAll(".pf-qr");
+            nodes.forEach(node => {
+                const value = node.dataset.value || "";
+                const rect = node.getBoundingClientRect();
+                const clientW = Math.floor(node.clientWidth || 0);
+                const clientH = Math.floor(node.clientHeight || 0);
+                const availW = clientW || Math.floor(rect.width || 0);
+                const availH = clientH || Math.floor(rect.height || 0);
+                if ((!availW && !availH) || (availW < 16 && availH < 16)) return;
+                let size = 0;
+                if (availW && availH) size = Math.max(16, Math.min(availW, availH));
+                else size = Math.max(16, availW || availH || 16);
+                if (node.dataset.renderedSize && parseInt(node.dataset.renderedSize, 10) === size) return;
+                node.innerHTML = "";
+                try {
+                    new QRCode(node, {
+                        text: value,
+                        width: size,
+                        height: size,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff'
+                    });
+                    node.dataset.renderedSize = String(size);
+                } catch (e) {
+                    node.innerHTML = "";
+                    const a = document.createElement('a');
+                    a.href = value;
+                    a.textContent = value;
+                    node.appendChild(a);
+                }
+            });
+        } catch (e) {
+            console.error('pfRenderQRs', e);
+        }
+    }
+    window.pfRenderQRs = pfRenderQRs;
+    document.addEventListener('DOMContentLoaded', function() {
+        try { pfRenderQRs(); } catch (e) {}
+        setTimeout(function(){ window.__pf_qr_done = true; }, 200);
+    });
+})();
+</script>

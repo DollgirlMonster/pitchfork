@@ -1,0 +1,259 @@
+/* PITCHFORK /presenter view
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap');
+
+/* MARK: VIEW: PRESENTER (/presenter) */
+.view-presenter {
+  overflow: hidden;
+  height: 100vh;
+}
+
+#presenter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 60vh 1fr;
+  grid-template-areas:
+    "current  next"
+    "meta     notes";
+  height: 100vh;
+  gap: 0;
+}
+
+#pres-current { grid-area: current; border-right: 1px solid var(--pf-border); border-bottom: 1px solid var(--pf-border); position: relative; overflow: hidden; }
+#pres-next    { grid-area: next;    border-bottom: 1px solid var(--pf-border); opacity: 0.7; position: relative; overflow: hidden; }
+#pres-meta    { grid-area: meta;    border-right: 1px solid var(--pf-border); padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; background: var(--pf-muted); }
+#pres-notes   { grid-area: notes;   overflow-y: auto; display: flex; flex-direction: column; }
+
+#pres-current {
+  grid-area: current;
+  border-right: 1px solid var(--pf-border);
+  border-bottom: 1px solid var(--pf-border);
+  position: relative;
+  overflow: hidden;
+}
+#pres-next {
+  grid-area: next;
+  border-bottom: 1px solid var(--pf-border);
+  opacity: 0.7;
+  position: relative;
+  overflow: hidden;
+}
+#pres-meta {
+  grid-area: meta;
+  border-right: 1px solid var(--pf-border);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--pf-muted);
+}
+#pres-notes {
+  grid-area: notes;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.pres-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--pf-muted);
+  font-family: var(--pf-font-code);
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid var(--pf-border);
+  z-index: 10;
+}
+
+.pres-slide-frame {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* push content down so it doesn't sit under the label */
+  padding-top: 1.6rem;
+  box-sizing: border-box;
+}
+
+/* MARK: Scrollable all-notes list */
+.pres-notes-entry {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--pf-border);
+  transition: opacity 0.2s;
+  font-family: var(--pf-font-notes);
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+  line-height: 1.75;
+}
+
+.pres-notes-entry:last-child { border-bottom: none; }
+
+.pres-notes-entry.dimmed {
+  opacity: 0.3;
+}
+
+.pres-notes-entry-label {
+  font-size: 0.65rem;
+  font-family: var(--pf-font-code);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--pf-accent);
+  margin-bottom: 0.5rem;
+}
+
+.pres-notes-entry.dimmed .pres-notes-entry-label {
+  color: var(--pf-muted);
+}
+
+.pres-notes-entry ul, .pres-notes-entry ol { padding-left: 1.5em; }
+.pres-notes-entry li { margin-bottom: 0.35em; }
+.notes-empty { color: var(--pf-muted); font-style: italic; }
+
+#pres-counter {
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  font-family: var(--pf-font-code);
+  color: var(--pf-fg);
+}
+
+/* MARK: Timer */
+#pres-timer {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-family: var(--pf-font-code);
+  font-weight: bold;
+  color: var(--pf-fg);
+  letter-spacing: 0.05em;
+}
+
+#timer-controls { display: flex; gap: 0.5rem; }
+
+#timer-controls button {
+  padding: 0.35em 0.9em;
+  border: 1px solid var(--pf-border);
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: var(--pf-font-body);
+  transition: background 0.1s;
+}
+#timer-controls button:hover { background: var(--pf-accent); color: white; border-color: var(--pf-accent); }
+
+.end-marker { color: var(--pf-muted); font-style: italic; text-align: center; margin-top: 2rem; }
+
+/* MARK: Chapter indicator */
+
+#pres-chapter {
+  font-family: var(--pf-font-code);
+  font-size: 0.7rem;
+  color: white;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+/* MARK: Chapter jump overlay */
+
+#chapter-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: oklch(10% 0.01 240 / 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+
+#chapter-overlay.open {
+  display: flex;
+}
+
+#chapter-overlay-inner {
+  background: var(--pf-bg);
+  border: 1px solid var(--pf-border);
+  border-radius: 10px;
+  padding: 1.5rem 2rem;
+  min-width: 360px;
+  max-width: 560px;
+  width: 90vw;
+  box-shadow: 0 8px 32px oklch(0% 0 0 / 0.3);
+}
+
+#chapter-overlay-title {
+  font-family: var(--pf-font-code);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pf-muted);
+  margin-bottom: 1rem;
+}
+
+#chapter-overlay-hint {
+  font-family: var(--pf-font-code);
+  font-size: 0.65rem;
+  color: var(--pf-muted);
+  margin-top: 1rem;
+  opacity: 0.7;
+}
+
+.chapter-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.chapter-item:hover {
+  background: oklch(from var(--pf-accent) l c h / 0.08);
+}
+
+.chapter-item-num {
+  font-family: var(--pf-font-code);
+  font-size: 0.7rem;
+  color: var(--pf-accent);
+  min-width: 1.2rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.chapter-item-title {
+  font-family: var(--pf-font-body);
+  font-size: 1rem;
+  color: var(--pf-fg);
+  flex: 1;
+}
+
+.chapter-item-slide {
+  font-family: var(--pf-font-code);
+  font-size: 0.65rem;
+  color: var(--pf-muted);
+  flex-shrink: 0;
+}
+
+/* MARK: QR codes */
+.pf-qr {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  max-height: 100%;
+  border: 0.5rem solid #fff;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pf-qr canvas, .pf-qr img {
+  display: block;
+  width: 100%;
+  height: auto;
+}

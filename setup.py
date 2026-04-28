@@ -8,6 +8,9 @@ setup(
         "pitchfork": [
             "pitchfork.css",
             "layouts/*.py",
+            "templates/*.html",
+            "templates/*.css",
+            "templates/*.js",
         ]
     },
     install_requires=[

@@ -1,0 +1,23 @@
+.export-slide { display: none; }
+.export-slide.active { display: block; }
+
+#slide-logo {
+    position: fixed;
+    bottom: 1rem;
+    left: 1.5rem;
+    height: 2rem;
+    width: auto;
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 50;
+}
+
+#slide-counter {
+    position: fixed;
+    bottom: 1rem;
+    right: 1.5rem;
+    font-size: 0.75rem;
+    color: var(--pf-muted, #666);
+    font-family: var(--pf-font-code, monospace);
+    opacity: 0.5;
+}

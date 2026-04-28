@@ -1,0 +1,208 @@
+<body class="view-presenter">
+<div id="presenter-grid">
+  <div id="pres-current">
+    <div class="pres-label">Current</div>
+    <div id="pres-current-slide" class="pres-slide-frame"></div>
+  </div>
+  <div id="pres-next">
+    <div class="pres-label">Next</div>
+    <div id="pres-next-slide" class="pres-slide-frame"></div>
+  </div>
+  <div id="pres-meta">
+    <div id="pres-counter"></div>
+    <div id="pres-chapter"></div>
+    <div id="pres-timer">00:00</div>
+    <div id="timer-controls">
+      <button onclick="startTimer()">Start</button>
+      <button onclick="pauseTimer()">Pause</button>
+      <button onclick="resetTimer()">Reset</button>
+    </div>
+  </div>
+  <div id="pres-notes">
+    <div id="pres-notes-list"></div>
+  </div>
+</div>
+
+<!-- MARK: Chapter jump overlay -->
+<div id="chapter-overlay">
+  <div id="chapter-overlay-inner">
+    <div id="chapter-overlay-title">Jump to Chapter</div>
+    <div id="chapter-list"></div>
+    <div id="chapter-overlay-hint">click or press number key &middot; c or esc to close</div>
+  </div>
+</div>
+
+<script>
+const slides = __SLIDES_JSON__;
+const chapters = __CHAPTERS_JSON__;
+let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
+let timerSeconds = 0, timerInterval = null;
+
+const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
+ws.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+  if (msg.type === 'navigate') { current = msg.index; render(); }
+  if (msg.type === 'reload') { location.hash = '#' + current; location.reload(); }
+};
+
+function navigate(idx) {
+  current = Math.max(0, Math.min(slides.length - 1, idx));
+  render();
+  ws.send(JSON.stringify({ type: 'navigate', index: current }));
+}
+
+// MARK: Chapter Utilities
+// TODO: dedupe chapter utils across views
+function currentChapterTitle() {
+  let title = null;
+  for (const ch of chapters) {
+    if (ch.index <= current) title = ch.title;
+    else break;
+  }
+  return title;
+}
+
+function buildNotesList() {
+  const list = document.getElementById('pres-notes-list');
+  list.innerHTML = '';
+  slides.forEach((slide, i) => {
+    const entry = document.createElement('div');
+    entry.className = 'pres-notes-entry dimmed';
+    entry.dataset.index = i;
+    const label = document.createElement('div');
+    label.className = 'pres-notes-entry-label';
+    label.textContent = 'Slide ' + (i + 1);
+    entry.appendChild(label);
+    const body = document.createElement('div');
+    body.innerHTML = slide.notes;
+    entry.appendChild(body);
+    list.appendChild(entry);
+  });
+  if (window.pfRenderQRs) pfRenderQRs(list);
+}
+
+// Make tasklist checkboxes interactive in presenter notes (no persistence).
+function _makeTasklistsInteractivePres(root) {
+  if (!root) root = document;
+  root.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    try { cb.disabled = false; } catch (e) {}
+    const li = cb.closest('li');
+    if (li) li.classList.toggle('task-checked', cb.checked);
+    cb.addEventListener('change', (e) => {
+      const li = e.target.closest('li');
+      if (li) li.classList.toggle('task-checked', e.target.checked);
+    });
+    if (li) {
+      li.addEventListener('click', (ev) => {
+        if (ev.target === cb) return;
+        cb.checked = !cb.checked;
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+  });
+}
+
+function render() {
+  const slide = slides[current];
+  const next = slides[current + 1];
+  document.getElementById('pres-current-slide').innerHTML = slide.html;
+  document.getElementById('pres-next-slide').innerHTML = next ? next.html : '<div class="end-marker">End of deck</div>';
+  document.getElementById('pres-counter').textContent = (current + 1) + ' / ' + slides.length;
+  document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+  if (window.pfRenderQRs) pfRenderQRs(document.getElementById('pres-current-slide'));
+  if (window.pfRenderQRs) pfRenderQRs(document.getElementById('pres-next-slide'));
+
+  // Chapter indicator
+  const chapterEl = document.getElementById('pres-chapter');
+  const title = currentChapterTitle();
+  if (title) {
+    chapterEl.textContent = '\u00a7 ' + title;
+    chapterEl.style.display = '';
+  } else {
+    chapterEl.style.display = 'none';
+  }
+
+  // Update dimming
+  document.querySelectorAll('.pres-notes-entry').forEach(entry => {
+    const isCurrent = parseInt(entry.dataset.index) === current;
+    entry.classList.toggle('dimmed', !isCurrent);
+  });
+
+  // Auto-scroll current entry into view
+  const activeEntry = document.querySelector('.pres-notes-entry:not(.dimmed)');
+  if (activeEntry) {
+    activeEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function startTimer() {
+  if (timerInterval) return;
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+    const s = String(timerSeconds % 60).padStart(2, '0');
+    document.getElementById('pres-timer').textContent = m + ':' + s;
+  }, 1000);
+}
+function pauseTimer() { clearInterval(timerInterval); timerInterval = null; }
+function resetTimer() { pauseTimer(); timerSeconds = 0; document.getElementById('pres-timer').textContent = '00:00'; }
+
+// ── Chapter jump overlay ──────────────────────────────────────
+const overlay = document.getElementById('chapter-overlay');
+
+function openChapterOverlay() {
+  if (!chapters.length) return;
+  const list = document.getElementById('chapter-list');
+  list.innerHTML = '';
+  chapters.forEach((ch, i) => {
+    const item = document.createElement('div');
+    item.className = 'chapter-item';
+    const num = document.createElement('span');
+    num.className = 'chapter-item-num';
+    num.textContent = i + 1;
+    const ttl = document.createElement('span');
+    ttl.className = 'chapter-item-title';
+    ttl.textContent = ch.title;
+    const slideNum = document.createElement('span');
+    slideNum.className = 'chapter-item-slide';
+    slideNum.textContent = 'slide ' + (ch.index + 1);
+    item.appendChild(num);
+    item.appendChild(ttl);
+    item.appendChild(slideNum);
+    item.addEventListener('click', () => { closeChapterOverlay(); navigate(ch.index); });
+    list.appendChild(item);
+  });
+  overlay.classList.add('open');
+}
+
+function closeChapterOverlay() {
+  overlay.classList.remove('open');
+}
+
+overlay.addEventListener('click', (e) => {
+  if (e.target === overlay) closeChapterOverlay();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (overlay.classList.contains('open')) {
+    if (e.key === 'Escape' || e.key === 'c') { closeChapterOverlay(); return; }
+    const n = parseInt(e.key);
+    if (!isNaN(n) && n >= 1 && n <= chapters.length) {
+      closeChapterOverlay();
+      navigate(chapters[n - 1].index);
+      return;
+    }
+    return; // swallow other keys while overlay is open
+  }
+  if (e.key === 'c') { openChapterOverlay(); return; }
+  if (e.key === 'ArrowRight' || e.key === 'j' || e.key === ' ') navigate(current + 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'k') navigate(current - 1);
+  if (e.key === 't') window.open('/timer', '_blank');
+});
+
+buildNotesList();
+render();
+document.getElementById('pres-chapter').addEventListener('click', openChapterOverlay);
+_makeTasklistsInteractivePres(document.getElementById('pres-notes-list'));
+</script>
+</body></html>

@@ -1,0 +1,149 @@
+/* PITCHFORK /notes view
+ */
+ 
+.view-notes {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#strip-container {
+  height: var(--pf-strip-height);
+  border-bottom: 1px solid var(--pf-border);
+  background: var(--pf-muted);
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+}
+
+#strip {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  height: 100%;
+  align-items: center;
+}
+
+.thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--pf-thumb-width);
+  height: calc(var(--pf-strip-height) - 1.5rem);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--pf-bg);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  transition: border-color 0.15s;
+}
+
+.thumb.active {
+  border-color: var(--pf-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pf-accent) 20%, transparent);
+}
+
+.thumb:hover:not(.active) { border-color: var(--pf-muted); }
+
+.thumb-inner {
+  position: absolute;
+  inset: 0;
+  transform-origin: top left;
+
+  /* Scale up slide content to fill thumbnail */
+  transform: scale(0.5);
+  width: 200%;
+  height: 200%;
+
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.thumb-num {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 0.65rem;
+  color: var(--pf-muted);
+  font-family: var(--pf-font-code);
+  background: rgba(255,255,255,0.8);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+#notes-panel {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#chapter-indicator {
+  font-family: var(--pf-font-code);
+  font-size: 0.75rem;
+  color: var(--pf-accent);
+  letter-spacing: 0.06em;
+  padding: 0.4rem 1.5rem;
+  border-bottom: 1px solid var(--pf-border);
+  background: var(--pf-bg);
+  flex-shrink: 0;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+#notes-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.notes-entry {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--pf-border);
+  transition: opacity 0.2s;
+  font-family: var(--pf-font-notes);
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+  line-height: 1.75;
+}
+
+.notes-entry:last-child { border-bottom: none; }
+
+.notes-entry.dimmed { opacity: 0.3; }
+
+.notes-entry-label {
+  font-size: 0.65rem;
+  font-family: var(--pf-font-code);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--pf-accent);
+  margin-bottom: 0.5rem;
+}
+
+.notes-entry.dimmed .notes-entry-label { color: var(--pf-muted); }
+
+.notes-entry ul, .notes-entry ol { padding-left: 1.5em; }
+.notes-entry li { margin-bottom: 0.35em; }
+.notes-empty { color: var(--pf-muted); font-style: italic; }
+
+/* Task list checkboxes (pymdownx.tasklist output). Make checked items strike-through. */
+.task-list-item { list-style: none; }
+.task-list-item input[type="checkbox"] {
+  margin-right: 0.5em;
+  transform: translateY(0.05em);
+  cursor: pointer;
+}
+.task-list-item label { cursor: pointer; }
+
+/* Broad selector using :has (modern browsers) to strike-through the whole li when it
+   contains a checked checkbox (covers <label><input>Text</label> patterns). */
+.task-list-item:has(input[type="checkbox"]:checked) {
+  text-decoration:line-through;
+  color: var(--pf-muted);
+}
+
+/* Keep a visual affordance: pointer cursor on label and hover */
+.task-list-item label,
+.task-list-item label *,
+.task-list-item:hover {
+  cursor: pointer;
+}

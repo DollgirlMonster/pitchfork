@@ -1,0 +1,69 @@
+/* PITCHFORK base styles
+   Reset, CSS variables, and shared element defaults.
+ */
+
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; overflow: hidden; }
+
+/* MARK: CSS variable defaults (overridable in styles.css) */
+:root {
+  --pf-bg:            #ffffff;
+  --pf-fg:            #111111;
+  --pf-accent:        #0055ff;
+  --pf-muted:         #888888;
+  --pf-border:        #e0e0e0;
+  --pf-font-body:     system-ui, sans-serif;
+  --pf-font-code:     'JetBrains Mono', 'Fira Code', monospace;
+  --pf-font-notes:    'Atkinson Hyperlegible', system-ui, sans-serif;
+  --pf-font-size:     clamp(1rem, 2.5vw, 2rem);
+  --pf-strip-height:  180px;
+  --pf-thumb-width:   240px;
+}
+
+/* MARK: Shared base */
+body {
+  background: var(--pf-bg);
+  color: var(--pf-fg);
+  font-family: var(--pf-font-body);
+  font-size: var(--pf-font-size);
+  line-height: 1.5;
+}
+
+img {
+  width: 100%;
+  height: auto;
+}
+
+code, pre {
+  font-family: var(--pf-font-code);
+}
+
+code {
+  color: var(--pf-accent);
+  font-family: var(--pf-font-code);
+  background: rgba(255 255 255 / 0.1);
+  padding: 0.1em 0.2em;
+  border-radius: 0.2em;
+}
+
+strong {
+  color: var(--pf-accent);
+}
+
+a, a:link, a:visited {
+  color: var(--pf-accent);
+}
+a:hover, a:focus, a:active {
+  color: var(--pf-fg);
+  background: var(--pf-accent);
+  text-decoration: none;
+}
+
+pre {
+  background: #1e1e1e;
+  border-radius: 0.4em;
+  padding: 1em;
+  overflow: auto;
+  font-size: 0.6em;
+}

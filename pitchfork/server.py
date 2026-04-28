@@ -116,7 +116,9 @@ class PitchforkServer:
             body = self.css_path.read_bytes() if self.css_path.exists() else b""
             return body, "text/css"
         if path == "/pitchfork.css":
-            return (self._css_dir / "pitchfork.css").read_bytes(), "text/css"
+            _CSS_PARTIALS = ["base.css", "layouts.css", "slides.css", "notes.css", "presenter.css"]
+            body = b"\n".join(((self._css_dir / "templates" / p).read_bytes() for p in _CSS_PARTIALS))
+            return body, "text/css"
 
         # Serve arbitrary files relative to the deck directory
         MIME_TYPES = {

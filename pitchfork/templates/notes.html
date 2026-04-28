@@ -1,0 +1,183 @@
+<body class="view-notes">
+<div id="strip-container">
+  <div id="strip"></div>
+</div>
+<div id="notes-panel">
+  <div id="chapter-indicator"></div>
+  <div id="notes-list"></div>
+</div>
+
+<!-- MARK: Chapter Jump Overlay -->
+<div id="chapter-overlay">
+  <div id="chapter-overlay-inner">
+    <div id="chapter-overlay-title">Jump to Chapter</div>
+    <div id="chapter-list"></div>
+    <div id="chapter-overlay-hint">click or press number key &middot; c or esc to close</div>
+  </div>
+</div>
+
+<script>
+const slides = __SLIDES_JSON__;
+const chapters = __CHAPTERS_JSON__;
+let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
+
+const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
+ws.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+  if (msg.type === 'navigate') { current = msg.index; render(); }
+  if (msg.type === 'reload') { location.hash = '#' + current; location.reload(); }
+};
+
+function navigate(idx) {
+  current = Math.max(0, Math.min(slides.length - 1, idx));
+  render();
+  ws.send(JSON.stringify({ type: 'navigate', index: current }));
+}
+
+// MARK: Chapter Utilities
+function currentChapterTitle() {
+  let title = null;
+  for (const ch of chapters) {
+    if (ch.index <= current) title = ch.title;
+    else break;
+  }
+  return title;
+}
+
+function buildStrip() {
+  const strip = document.getElementById('strip');
+  strip.innerHTML = '';
+  slides.forEach((slide, i) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    thumb.dataset.index = i;
+    thumb.innerHTML = '<div class="thumb-inner">' + slide.html + '</div><span class="thumb-num">' + (i + 1) + '</span>';
+    thumb.addEventListener('click', () => navigate(i));
+    strip.appendChild(thumb);
+  });
+  if (window.pfRenderQRs) pfRenderQRs(strip);
+}
+
+function buildNotesList() {
+  const list = document.getElementById('notes-list');
+  list.innerHTML = '';
+  slides.forEach((slide, i) => {
+    const entry = document.createElement('div');
+    entry.className = 'notes-entry dimmed';
+    entry.dataset.index = i;
+    const label = document.createElement('div');
+    label.className = 'notes-entry-label';
+    label.textContent = 'Slide ' + (i + 1);
+    entry.appendChild(label);
+    const body = document.createElement('div');
+    body.innerHTML = slide.notes;
+    entry.appendChild(body);
+    list.appendChild(entry);
+  });
+  if (window.pfRenderQRs) pfRenderQRs(list);
+}
+
+// Make tasklist checkboxes interactive in notes
+function _makeTasklistsInteractive(root) {
+  if (!root) root = document;
+  root.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    try { cb.disabled = false; } catch (e) {}
+    const li = cb.closest('li');
+    if (li) li.classList.toggle('task-checked', cb.checked);
+    cb.addEventListener('change', (e) => {
+      const li = e.target.closest('li');
+      if (li) li.classList.toggle('task-checked', e.target.checked);
+    });
+    if (li) {
+      li.addEventListener('click', (ev) => {
+        if (ev.target === cb) return;
+        cb.checked = !cb.checked;
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+  });
+}
+
+function render() {
+  document.querySelectorAll('.thumb').forEach(t => {
+    t.classList.toggle('active', parseInt(t.dataset.index) === current);
+  });
+  document.querySelectorAll('.notes-entry').forEach(e => {
+    e.classList.toggle('dimmed', parseInt(e.dataset.index) !== current);
+  });
+
+  const activeThumb = document.querySelector('.thumb.active');
+  if (activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+
+  const activeEntry = document.querySelector('.notes-entry:not(.dimmed)');
+  if (activeEntry) activeEntry.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // MARK: Chapter indicator
+  const indicator = document.getElementById('chapter-indicator');
+  const title = currentChapterTitle();
+  if (title) {
+    indicator.textContent = '\u00a7 ' + title;
+    indicator.style.display = '';
+  } else {
+    indicator.style.display = 'none';
+  }
+}
+
+function openChapterOverlay() {
+  if (!chapters.length) return;
+  const list = document.getElementById('chapter-list');
+  list.innerHTML = '';
+  chapters.forEach((ch, i) => {
+    const item = document.createElement('div');
+    item.className = 'chapter-item';
+    const num = document.createElement('span');
+    num.className = 'chapter-item-num';
+    num.textContent = i + 1;
+    const ttl = document.createElement('span');
+    ttl.className = 'chapter-item-title';
+    ttl.textContent = ch.title;
+    const slideNum = document.createElement('span');
+    slideNum.className = 'chapter-item-slide';
+    slideNum.textContent = 'slide ' + (ch.index + 1);
+    item.appendChild(num);
+    item.appendChild(ttl);
+    item.appendChild(slideNum);
+    item.addEventListener('click', () => { closeChapterOverlay(); navigate(ch.index); });
+    list.appendChild(item);
+  });
+  overlay.classList.add('open');
+}
+
+function closeChapterOverlay() {
+  overlay.classList.remove('open');
+}
+
+const overlay = document.getElementById('chapter-overlay');
+
+overlay.addEventListener('click', (e) => {
+  if (e.target === overlay) closeChapterOverlay();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (overlay.classList.contains('open')) {
+    if (e.key === 'Escape' || e.key === 'c') { closeChapterOverlay(); return; }
+    const n = parseInt(e.key);
+    if (!isNaN(n) && n >= 1 && n <= chapters.length) {
+      closeChapterOverlay();
+      navigate(chapters[n - 1].index);
+      return;
+    }
+    return; // swallow other keys while overlay is open
+  }
+  if (e.key === 'c') { openChapterOverlay(); return; }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'j' || e.key === ' ') navigate(current + 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp'   || e.key === 'k') navigate(current - 1);
+});
+
+buildStrip();
+buildNotesList();
+render();
+document.getElementById('chapter-indicator').addEventListener('click', openChapterOverlay);
+_makeTasklistsInteractive(document.getElementById('notes-list'));
+</script>
+</body></html>

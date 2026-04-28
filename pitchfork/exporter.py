@@ -38,45 +38,9 @@ def _embed_local_images(html: str, deck_dir: Path) -> str:
     return re.sub(r'src="([^"]+)"', replace, html)
 
 
-# Measures whether .slide-layout overflows its container and returns the scale
-# needed to fit it, or 1.0 if it fits already.
-#
-# pre/code elements default to overflow:auto + flex:1, which hides their true
-# height from scrollHeight. We release them first so the full content is visible
-# to the measurement, then compute scale from scroll vs client dimensions.
-_MEASURE_SCALE_JS = """
-() => {
-    const slide = document.querySelector('.export-slide');
-    if (!slide) return 1.0;
-    const inner = slide.querySelector('.slide-layout') || slide;
-
-    // Release pre elements from flex/scroll containment so their full height is measurable.
-    inner.querySelectorAll('pre').forEach(p => {
-        p.style.overflow = 'visible';
-        p.style.maxHeight = 'none';
-        p.style.flex = 'none';
-        p.style.height = 'auto';
-        p.style.whiteSpace = 'pre-wrap';
-        p.style.wordBreak = 'break-word';
-    });
-
-    // Temporarily make overflow visible so scrollWidth/scrollHeight reflect true content size.
-    const prevSlide = slide.style.overflow;
-    const prevInner = inner.style.overflow;
-    slide.style.overflow = 'visible';
-    inner.style.overflow = 'visible';
-
-    const scaleW = slide.clientWidth  / inner.scrollWidth;
-    const scaleH = slide.clientHeight / inner.scrollHeight;
-
-    slide.style.overflow = prevSlide;
-    inner.style.overflow = prevInner;
-
-    const fit = Math.min(1.0, scaleW, scaleH);
-    // Ignore sub-pixel rounding differences.
-    return fit >= 0.98 ? 1.0 : Math.max(fit, 0.1);
-}
-"""
+_MEASURE_SCALE_JS = (
+    Path(__file__).resolve().parent / "templates" / "measure-scale.js"
+).read_text(encoding="utf-8")
 
 
 def _build_slide_html(slide_html: str, css: str, head_tags: str,
@@ -121,8 +85,15 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
     total  = len(slides)
     init_layouts(deck_path)
 
-    pkg_dir = Path(__file__).resolve().parent
-    pitchfork_css = (pkg_dir / "pitchfork.css").read_text(encoding="utf-8")
+    pkg_dir  = Path(__file__).resolve().parent
+    tmpl_dir = pkg_dir / "templates"
+
+    # Build CSS doc out of bitz
+    _CSS_PARTIALS = ["base.css", "layouts.css", "slides.css", "notes.css", "presenter.css"]
+    pitchfork_css = "\n".join(
+        (tmpl_dir / name).read_text(encoding="utf-8") for name in _CSS_PARTIALS
+    )
+
     user_css_path = deck_path.parent / "styles.css"
     user_css = user_css_path.read_text(encoding="utf-8") if user_css_path.exists() else ""
 
@@ -132,94 +103,13 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
         logo_uri = "data:image/png;base64," + base64.b64encode(logo_path.read_bytes()).decode()
 
     w_in, h_in = w / dpi, h / dpi
-    export_css = f"""
-    html, body {{ margin: 0; padding: 0; overflow: hidden;
-        background: var(--pf-bg, #fff); color: var(--pf-fg, #000);
-        -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-    .export-slide {{ position: relative; box-sizing: border-box;
-        width: 100vw; height: 100vh; overflow: hidden; }}
-    .export-slide .slide-layout {{ max-width: 100%; box-sizing: border-box; }}
-    .export-slide * {{ max-width: 100%; box-sizing: border-box; }}
-    .export-slide pre, .export-slide code {{
-        white-space: pre-wrap !important;
-        word-break: break-word !important;
-        overflow-wrap: anywhere !important; }}
-    .export-slide table {{ width: 100% !important; table-layout: fixed; }}
-    .slide-logo {{ position: fixed; bottom: 1rem; left: 1.5rem;
-        height: 2rem; width: auto; opacity: 0.15; pointer-events: none; z-index: 50; }}
-    .slide-counter {{ position: fixed; bottom: 1rem; right: 1.5rem;
-        font-size: 0.75rem; color: var(--pf-muted, #666);
-        font-family: var(--pf-font-code, monospace); opacity: 0.5; }}
-    @media print {{
-        .export-slide {{ break-after: page; page-break-after: always; display: block !important; }}
-    }}
-    @page {{ size: {w_in:.4f}in {h_in:.4f}in; margin: 0 }}
-    """
+    export_css = (
+        (tmpl_dir / "exporter-base.css").read_text(encoding="utf-8")
+        + f"\n@page {{ size: {w_in:.4f}in {h_in:.4f}in; margin: 0 }}\n"
+    )
 
-    head_tags = """
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script>
-    window.__pf_highlight_done = false;
-    document.addEventListener("DOMContentLoaded", () => {
-        try {
-            if (window.hljs) hljs.highlightAll();
-        } finally {
-            window.__pf_highlight_done = true;
-        }
-    });
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script>
-    window.__pf_qr_done = false;
-    (function(){
-        function pfRenderQRs(root) {
-            try {
-                root = root || document;
-                const nodes = root.querySelectorAll(".pf-qr");
-                nodes.forEach(node => {
-                    const value = node.dataset.value || "";
-                    const rect = node.getBoundingClientRect();
-                    const clientW = Math.floor(node.clientWidth || 0);
-                    const clientH = Math.floor(node.clientHeight || 0);
-                    const availW = clientW || Math.floor(rect.width || 0);
-                    const availH = clientH || Math.floor(rect.height || 0);
-                    if ((!availW && !availH) || (availW < 16 && availH < 16)) return;
-                    let size = 0;
-                    if (availW && availH) size = Math.max(16, Math.min(availW, availH));
-                    else size = Math.max(16, availW || availH || 16);
-                    if (node.dataset.renderedSize && parseInt(node.dataset.renderedSize, 10) === size) return;
-                    node.innerHTML = "";
-                    try {
-                        new QRCode(node, {
-                            text: value,
-                            width: size,
-                            height: size,
-                            colorDark: '#000000',
-                            colorLight: '#ffffff'
-                        });
-                        node.dataset.renderedSize = String(size);
-                    } catch (e) {
-                        node.innerHTML = "";
-                        const a = document.createElement('a');
-                        a.href = value;
-                        a.textContent = value;
-                        node.appendChild(a);
-                    }
-                });
-            } catch (e) {
-                console.error('pfRenderQRs', e);
-            }
-        }
-        window.pfRenderQRs = pfRenderQRs;
-        document.addEventListener('DOMContentLoaded', function() {
-            try { pfRenderQRs(); } catch (e) {}
-            setTimeout(function(){ window.__pf_qr_done = true; }, 200);
-        });
-    })();
-    </script>
-    """
+    head_tags = (tmpl_dir / "exporter-head.html").read_text(encoding="utf-8")
+
     full_css = f"{pitchfork_css}\n{user_css}\n{export_css}"
 
     # ── HTML export ──────────────────────────────────────────────────────────
@@ -230,35 +120,8 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
         overlay  = (f'<img id="slide-logo" src="{logo_uri}" alt="logo">' if logo_uri else "")
         overlay += f'<div id="slide-counter">1 / {total}</div>'
 
-        html_nav_css = """
-        .export-slide { display: none; }
-        .export-slide.active { display: block; }
-        #slide-logo { position: fixed; bottom: 1rem; left: 1.5rem;
-            height: 2rem; width: auto; opacity: 0.15; pointer-events: none; z-index: 50; }
-        #slide-counter { position: fixed; bottom: 1rem; right: 1.5rem;
-            font-size: 0.75rem; color: var(--pf-muted, #666);
-            font-family: var(--pf-font-code, monospace); opacity: 0.5; }
-        """
-
-        nav_script = """<script>
-(function(){
-  const slides = Array.from(document.querySelectorAll('.export-slide'));
-  const counter = document.getElementById('slide-counter');
-  let idx = 0;
-  const show = i => {
-    idx = ((i % slides.length) + slides.length) % slides.length;
-    slides.forEach((s, n) => s.classList.toggle('active', n === idx));
-    if (counter) counter.textContent = `${idx + 1} / ${slides.length}`;
-    window.scrollTo(0, 0);
-  };
-  document.addEventListener('keydown', e => {
-    if (e.target.matches('input,textarea')) return;
-    if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key))  { e.preventDefault(); show(idx + 1); }
-    if (['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); show(idx - 1); }
-  });
-  show(0);
-})();
-</script>"""
+        html_nav_css = (tmpl_dir / "exporter-nav.css").read_text(encoding="utf-8")
+        nav_script   = "<script>\n" + (tmpl_dir / "exporter-nav.js").read_text(encoding="utf-8") + "\n</script>"
 
         out_html = deck_path.with_suffix(".html")
         out_html.write_text(

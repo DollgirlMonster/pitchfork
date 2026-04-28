@@ -1,2 +1,3 @@
 include pitchfork/pitchfork.css
 recursive-include pitchfork/layouts *.py
+recursive-include pitchfork/templates *.py
