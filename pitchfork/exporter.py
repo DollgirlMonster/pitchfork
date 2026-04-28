@@ -108,7 +108,7 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
     dk_cfg = config.get("deck", {})
 
     default_layout = dk_cfg.get("default_layout", "body")
-    resolution     = ex_cfg.get("resolution", "1920x1080")
+    resolution     = ex_cfg.get("resolution", "1080x720")
     dpi            = float(ex_cfg.get("dpi", 96.0))
 
     try:

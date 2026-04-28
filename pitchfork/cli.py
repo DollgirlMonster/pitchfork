@@ -47,7 +47,7 @@ default_layout = "body"
 
 [export]
 # Pixel dimensions of each slide. PDFs are exported at 192 DPI, so 1920x1080 -> 10" x 5.625"
-resolution = "1920x1080"
+resolution = "1080x720"
 """
 
 EXAMPLE_DECK = """\

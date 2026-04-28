@@ -176,7 +176,7 @@ Defines default layout and export settings. Example:
 default_layout = "body"   # fallback when layout can't be guessed
 
 [export]
-resolution = "1920x1080"
+resolution = "1080x720"
 ```
 
 ### `styles.css` Styling
