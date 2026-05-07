@@ -18,27 +18,31 @@ except ImportError:
 
 
 DEFAULT_CSS = """\
-/* Pitchfork Styles
-   Override any CSS variable or add your own
-   rules here. See pitchfork.css for layout
-   classes you can target. */
+/*  Pitchfork Styles
+    Override any CSS variable or add your own
+    rules here. See pitchfork.css for layout
+    classes you can target. */
 
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
-  --pf-bg:         oklch(98% 0.01 95);
-  --pf-fg:         oklch(22% 0.02 30);
-  --pf-accent:     oklch(65% 0.19 35);
-  --pf-muted:      oklch(60% 0.03 30);
-  --pf-border:     oklch(90% 0.01 95);
+    --pf-bg:         oklch(98% 0.01 95);
+    --pf-fg:         oklch(22% 0.02 30);
+    --pf-accent:     oklch(65% 0.19 35);
+    --pf-muted:      oklch(60% 0.03 30);
+    --pf-border:     oklch(90% 0.01 95);
 
-  --pf-font-header: 'Instrument Serif', Georgia, serif;
-  --pf-font-body:   Georgia, serif;
-  --pf-font-code:   'DM Mono', 'JetBrains Mono', monospace;
-  --pf-font-size:   clamp(1rem, 2.5vw, 2rem);
+    --pf-font-header: 'Instrument Serif', Georgia, serif;
+    --pf-font-body:   Georgia, serif;
+    --pf-font-code:   'DM Mono', 'JetBrains Mono', monospace;
+    --pf-font-size:   clamp(1rem, 2.5vw, 2rem);
 
-  --pf-draw-color: var(--pf-accent);
-  --pf-draw-width: 4;
+    --pf-draw-color: var(--pf-accent);
+    --pf-draw-width: 4;
+}
+
+img {
+    border-radius: 0.5em;
 }
 """
 
