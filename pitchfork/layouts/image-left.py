@@ -1,6 +1,6 @@
 """
-Image-right layout — text on the left, image floated to the right.
-Auto-selected when a markdown image follows the slide's text content.
+Image-left layout — image on the left, text on the right.
+Auto-selected when a markdown image precedes the slide's text content.
 """
 import re
 
@@ -16,7 +16,7 @@ def match(slide) -> bool:
     img_match = _IMAGE_RE.search(clean)
     before = clean[: img_match.start()].strip()
     after = clean[img_match.end() :].strip()
-    return bool(before) and not after
+    return not before and bool(after)
 
 
 def html(slide, md) -> str:
@@ -25,10 +25,10 @@ def html(slide, md) -> str:
         img = md(img_match.group(0))
         text_body = md(slide.content.replace(img_match.group(0), "").strip())
         return (
-            '<div class="slide-layout image-right">'
-            f'<div class="image-text">{text_body}</div>'
+            '<div class="slide-layout image-left">'
             f'<div class="image-img">{img}</div>'
+            f'<div class="image-text">{text_body}</div>'
             "</div>"
         )
-    # Fallback — image regex matched but md() didn't find it (shouldn't happen)
+    # Fallback
     return f'<div class="slide-layout body">{md(slide.content)}</div>'
