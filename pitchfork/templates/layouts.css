@@ -50,9 +50,10 @@
 }
 
 /* prevent images from overflowing slide bounds in any layout */
-/* p:has(> img) grows to fill remaining flex space; img fills it with object-fit: contain */
+/* p:has(> img:not([style])) grows to fill space only for unstyled images;
+   explicitly sized <img style="..."> stays in a natural-height paragraph */
 .slide-layout {
-  & p:has(> img),
+  & p:has(> img:not([style])),
   & figure {
     display: flex;
     justify-content: center;
