@@ -27,11 +27,26 @@
   position: fixed;
   bottom: 1rem;
   right: 1.5rem;
-  height: 2rem;
-  width: auto;
+  mix-blend-mode: difference;
   opacity: 0.15;
+  max-width: 4rem;
   pointer-events: none;
   z-index: 50;
+
+  & img {
+    opacity:0;  /* For some reason setting display:none breaks the whole thing */
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--pf-muted);
+    mask-image: url('/logo.png');
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: right center;
+  }
 }
 
 #slide-chapter-strip {
@@ -44,6 +59,7 @@
   padding: 0.6rem 1.5rem 0.7rem;
   font-family: var(--pf-font-code);
   font-size: 1rem;
+  mix-blend-mode: difference;
   pointer-events: none;
   z-index: 50;
   /* fade rightward before reaching logo zone (~4rem from right) */
