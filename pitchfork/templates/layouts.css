@@ -11,13 +11,61 @@
   padding: clamp(1.5rem, 5vw, 4rem);
   gap: 0.75em;
   overflow: hidden;
-}
 
-.slide-layout h1 { font-size: clamp(1.8rem, 5vw, 4rem); line-height: 1.1; font-family: var(--pf-font-header); }
-.slide-layout h2 { font-size: clamp(1.2rem, 3vw, 2.2rem); line-height: 1.2; color: var(--pf-accent); font-family: var(--pf-font-header); }
-.slide-layout h3 { font-size: clamp(1rem, 2vw, 1.6rem); font-family: var(--pf-font-header); }
-.slide-layout p, .slide-layout li { font-size: clamp(0.9rem, 2vw, 1.5rem); }
-.slide-layout ul, .slide-layout ol { padding-left: 1.5em; }
+  & h1, h2, h3 {
+    font-family: var(--pf-font-header);
+  }
+
+  & h1 {
+    font-size: clamp(1.8rem, 5vw, 4rem);
+    line-height: 1.1;
+  }
+
+  & h2 {
+    font-size: clamp(1.2rem, 3vw, 2.2rem);
+    line-height: 1.2;
+    color: var(--pf-accent);
+  }
+
+  & h3 {
+    font-size: clamp(1rem, 2vw, 1.6rem);
+  }
+
+  & p, li {
+    font-size: clamp(0.9rem, 2vw, 1.5rem);
+    line-height: 1.4;
+  }
+
+  & ul, ol {
+    padding-left: 1.5em;
+  }
+
+  /* prevent images from overflowing slide bounds in any layout */
+  /* p:has(> img:not([style])) grows to fill space only for unstyled images;
+    explicitly sized <img style="..."> stays in a natural-height paragraph */
+  & p:has(> img:not([style])),
+  & figure {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    flex: 1 1 0;
+  }
+  & img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+  }
+
+  /* remove border and set full size on iframes */
+  & iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+}
 
 .slide-layout.body {
   /* Center images that may be resized */
@@ -54,27 +102,6 @@
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-all;
-}
-
-/* prevent images from overflowing slide bounds in any layout */
-/* p:has(> img:not([style])) grows to fill space only for unstyled images;
-   explicitly sized <img style="..."> stays in a natural-height paragraph */
-.slide-layout {
-  & p:has(> img:not([style])),
-  & figure {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 0;
-    flex: 1 1 0;
-  }
-  & img {
-    width: auto;
-    height: auto;
-    max-width: 100%;
-    max-height: 100%;
-    display: block;
-  }
 }
 
 /* MARK: two-column */
