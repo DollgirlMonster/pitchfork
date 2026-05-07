@@ -129,7 +129,8 @@ A `§ Chapter Title` indicator appears in all views to help you and your audienc
 | Only a single heading | `section` |
 | `::left::` / `::right::` zones | `two-column` |
 | Mostly code blocks | `code` |
-| Image + text | `image-right` |
+| An image, then text | `image-left` |
+| Text, then an image | `image-right` |
 | Everything else | `body` (or `default_layout` from `.pitchfork`) |
 
 
@@ -223,28 +224,6 @@ Override CSS variables or add your own rules. You're da boss.
 
 You can add a logo to your deck for a touch of subtle branding. Place a `logo.png` in your working directory, and Pitchfork will display it at low opacity in the bottom-right corner of each slide.
 
-## Export
-
-Pitchfork can export your deck to PDF, or a self-contained HTML folder. 
-
-### PDF Export
-PDF export requires Playwright & Chromium:
-
-```bash
-pip install playwright
-playwright install chromium
-pitchfork export slides.md
-```
-
-This writes `slides.pdf` next to your source file.
-
-### HTML Export
-
-```bash
-pitchfork export slides.md --html
-```
-
-This writes a self-contained `slides.html` which includes images, CSS, and JS
 
 ### Timer Widget
 
@@ -280,3 +259,26 @@ Usage:
 ```markdown
 [QR](https://example.com)
 ```
+
+## Export
+
+Pitchfork can export your deck to PDF, or a self-contained HTML folder. 
+
+### PDF Export
+PDF export requires Playwright & Chromium:
+
+```bash
+pip install playwright
+playwright install chromium
+pitchfork export slides.md
+```
+
+This writes `slides.pdf` next to your source file.
+
+### HTML Export
+
+```bash
+pitchfork export slides.md --html
+```
+
+This writes a self-contained `slides.html` which includes images, CSS, and JS
