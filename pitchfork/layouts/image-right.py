@@ -27,7 +27,7 @@ def html(slide, md) -> str:
         return (
             '<div class="slide-layout image-right">'
             f'<div class="image-text">{text_body}</div>'
-            f'<div class="image-img">{img}</div>'
+            f'<div class="img-container">{img}</div>'
             "</div>"
         )
     # Fallback — image regex matched but md() didn't find it (shouldn't happen)

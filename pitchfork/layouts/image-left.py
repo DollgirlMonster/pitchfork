@@ -26,7 +26,7 @@ def html(slide, md) -> str:
         text_body = md(slide.content.replace(img_match.group(0), "").strip())
         return (
             '<div class="slide-layout image-left">'
-            f'<div class="image-img">{img}</div>'
+            f'<div class="img-container">{img}</div>'
             f'<div class="image-text">{text_body}</div>'
             "</div>"
         )
