@@ -32,11 +32,12 @@ DEFAULT_CSS = """\
   --pf-muted:      oklch(60% 0.03 30);
   --pf-border:     oklch(90% 0.01 95);
 
-  --pf-font-body:  'Instrument Serif', Georgia, serif;
-  --pf-font-code:  'DM Mono', 'JetBrains Mono', monospace;
-  --pf-font-size:  clamp(1rem, 2.5vw, 2rem);
+  --pf-font-header: 'Instrument Serif', Georgia, serif;
+  --pf-font-body:   Georgia, serif;
+  --pf-font-code:   'DM Mono', 'JetBrains Mono', monospace;
+  --pf-font-size:   clamp(1rem, 2.5vw, 2rem);
 
-  --pf-draw-color: oklch(65% 0.19 35);
+  --pf-draw-color: var(--pf-accent);
   --pf-draw-width: 4;
 }
 """

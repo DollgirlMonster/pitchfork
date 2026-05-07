@@ -13,9 +13,9 @@
   overflow: hidden;
 }
 
-.slide-layout h1 { font-size: clamp(1.8rem, 5vw, 4rem); line-height: 1.1; }
-.slide-layout h2 { font-size: clamp(1.2rem, 3vw, 2.2rem); line-height: 1.2; color: var(--pf-accent); }
-.slide-layout h3 { font-size: clamp(1rem, 2vw, 1.6rem); }
+.slide-layout h1 { font-size: clamp(1.8rem, 5vw, 4rem); line-height: 1.1; font-family: var(--pf-font-header); }
+.slide-layout h2 { font-size: clamp(1.2rem, 3vw, 2.2rem); line-height: 1.2; color: var(--pf-accent); font-family: var(--pf-font-header); }
+.slide-layout h3 { font-size: clamp(1rem, 2vw, 1.6rem); font-family: var(--pf-font-header); }
 .slide-layout p, .slide-layout li { font-size: clamp(0.9rem, 2vw, 1.5rem); }
 .slide-layout ul, .slide-layout ol { padding-left: 1.5em; }
 

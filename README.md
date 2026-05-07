@@ -196,7 +196,9 @@ Override CSS variables or add your own rules. You're da boss.
     /* Border / separator color */
     --pf-border:        #e0e0e0;
 
-    /* Body font stack (used for slide content) */
+    /* Heading font stack for slide content*/
+    --pf-font-header:   system-ui, sans-serif;
+    /* Body font stack for slide content*/
     --pf-font-body:     system-ui, sans-serif;
     /* Monospace font stack used for code blocks and thumbnails */
     --pf-font-code:     'JetBrains Mono', 'Fira Code', monospace;
