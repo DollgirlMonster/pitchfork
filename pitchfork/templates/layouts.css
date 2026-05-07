@@ -21,7 +21,7 @@
 
 .slide-layout.body {
   /* Center images that may be resized */
-  & p:has(> img) {
+  & p:has(> img:not([style])) {
     margin:auto;
   }
 }
