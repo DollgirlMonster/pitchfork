@@ -148,16 +148,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
-
-    /* make the <p> wrapper stretch to fill .img-container so height: 100% on img resolves */
-    & p:has(> img) {
-      flex: none;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      margin: 0;
-    }
   }
   & img {
     width: auto;
