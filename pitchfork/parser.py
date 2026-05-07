@@ -48,11 +48,12 @@ def detect_layout(content: str, zones: dict) -> Optional[str]:
     if code_lines / total_lines > 0.5 and total_lines > 3:
         return "code"
 
-    images = list(re.finditer(r"!\[.*?\]\(.*?\)", re.sub(r"<!--.*?-->", "", stripped, flags=re.DOTALL)))
+    clean = re.sub(r"<!--.*?-->", "", stripped, flags=re.DOTALL)
+    images = list(re.finditer(r"!\[.*?\]\(.*?\)", clean))
     if len(images) == 1:
         img = images[0]
-        before = stripped[: img.start()].strip()
-        after = stripped[img.end() :].strip()
+        before = clean[: img.start()].strip()
+        after = clean[img.end() :].strip()
         if not before and after:
             return "image-left"
         if before and not after:

@@ -41,7 +41,7 @@ DEFAULT_CSS = """\
     --pf-draw-width: 4;
 }
 
-img {
+img, .img-container {
     border-radius: 0.5em;
 }
 """
