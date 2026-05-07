@@ -25,7 +25,7 @@
 
 #slide-logo {
   position: fixed;
-  bottom: 1rem;
+  bottom: 0.5rem;
   right: 1.5rem;
   mix-blend-mode: difference;
   opacity: 0.15;
