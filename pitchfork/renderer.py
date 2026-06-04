@@ -3,7 +3,7 @@ Renders Slide objects to HTML fragments using markdown + highlight.js.
 Layout selection is handled by layout_loader.
 """
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 
 import re
 import html
@@ -32,10 +32,27 @@ def md(text: str) -> str:
     """Convert markdown to HTML."""
     if not text:
         return ""
-    return markdown.markdown(
+
+    result = markdown.markdown(
         text,
         extensions=["fenced_code", "tables", "nl2br", "sane_lists", "pymdownx.tasklist"],
     )
+
+    # Problem: nl2br doesn't know about HTML structure, so it inserts <br> on
+    # every newline including inside raw <script>/<style> blocks, causing a 
+    # syntax error when the browser tries to parse <br> as JS or CSS
+    # Solution: after rendering, strip <br> back to newlines inside those blocks.
+    # Fenced code examples are safe to ignore here because the fenced_code
+    # extension already HTML-escapes them to &lt;script&gt; before nl2br runs.
+    def _remove_br(m: re.Match) -> str:
+        return re.sub(r'<br\s*/?>', '\n', m.group(0))
+
+    _SCRIPT_STYLE_BR_RE = re.compile(
+        r'<(script|style)\b[^>]*>.*?</\1>',
+        re.DOTALL | re.IGNORECASE,
+    )
+
+    return _SCRIPT_STYLE_BR_RE.sub(_remove_br, result)
 
 
 _MD_QR_ANCHOR_RE = re.compile(
