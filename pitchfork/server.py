@@ -9,6 +9,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Dict, Optional, Set, Tuple
+from urllib.parse import unquote
 
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -60,6 +61,7 @@ class PitchforkServer:
         self.chapters_json: str = "[]"
         self.default_layout: str = "body"
         self._css_dir = Path(__file__).parent
+        self.soundboard_json: str = "{}"
 
     # MARK: Public API
 
@@ -68,6 +70,9 @@ class PitchforkServer:
 
     def set_chapters_json(self, chapters_json: str) -> None:
         self.chapters_json = chapters_json
+
+    def set_soundboard_json(self, soundboard_json: str) -> None:
+        self.soundboard_json = soundboard_json
 
     async def broadcast(self, message: dict) -> None:
         if not self.clients:
@@ -101,12 +106,18 @@ class PitchforkServer:
 
     # MARK: HTTP handler
 
+    @staticmethod
+    def _safe_json(json_str: str) -> str:
+        """Escape </script> so it can't terminate the enclosing <script> block."""
+        return json_str.replace("</", "<\\/")
+
     def _inject(self, html: str) -> bytes:
         """Inject runtime values into an HTML template."""
         return (
-            html.replace("__SLIDES_JSON__", self.slides_json)
-               .replace("__CHAPTERS_JSON__", self.chapters_json)
+            html.replace("__SLIDES_JSON__", self._safe_json(self.slides_json))
+               .replace("__CHAPTERS_JSON__", self._safe_json(self.chapters_json))
                .replace("__WS_PORT__", str(self.port + 1))
+               .replace("__SOUNDBOARD_JSON__", self._safe_json(self.soundboard_json))
                .encode("utf-8")
         )
 
@@ -121,12 +132,16 @@ class PitchforkServer:
             return body, "text/css"
 
         # Serve arbitrary files relative to the deck directory
+        path = unquote(path)
         MIME_TYPES = {
             ".html": "text/html", ".htm": "text/html",
             ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
             ".png": "image/png", ".gif": "image/gif",
             ".webp": "image/webp", ".svg": "image/svg+xml",
             ".mp4": "video/mp4", ".webm": "video/webm",
+            ".mp3": "audio/mpeg", ".wav": "audio/wav",
+            ".ogg": "audio/ogg", ".flac": "audio/flac",
+            ".aac": "audio/aac",
             ".pdf": "application/pdf",
             ".js": "text/javascript", ".woff2": "font/woff2",
         }

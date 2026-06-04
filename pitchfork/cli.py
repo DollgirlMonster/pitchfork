@@ -53,6 +53,12 @@ default_layout = "body"
 [export]
 # Pixel dimensions of each slide. PDFs are exported at 192 DPI, so 1920x1080 -> 10" x 5.625"
 resolution = "1080x720"
+
+# [soundboard]
+# Trigger sounds in notes view with numpad keys 1–9
+# Paths are relative to the deck file
+# 1 = "sounds/ding.mp3"
+# 2 = "sounds/applause.mp3"
 """
 
 EXAMPLE_DECK = """\
@@ -282,10 +288,16 @@ def cmd_serve(args):
     slides_json = json.dumps(slides_to_json_payload(slides))
     chapters_json = json.dumps(chapters_json_payload(slides))
 
+    # Soundboard: map slot numbers (1-9) to URL paths
+    raw_soundboard = config.get("soundboard", {})
+    soundboard = {str(k): v for k, v in raw_soundboard.items() if str(k).isdigit() and 1 <= int(str(k)) <= 9}
+    soundboard_json = json.dumps(soundboard)
+
     server = PitchforkServer(deck_path, css_path, host="localhost", port=port)
     server.default_layout = default_layout
     server.set_slides_json(slides_json)
     server.set_chapters_json(chapters_json)
+    server.set_soundboard_json(soundboard_json)
 
     print(f"\n   On Deck — {deck_path.name} ({len(slides)} slides)")
 

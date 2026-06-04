@@ -179,5 +179,41 @@ buildNotesList();
 render();
 document.getElementById('chapter-indicator').addEventListener('click', openChapterOverlay);
 _makeTasklistsInteractive(document.getElementById('notes-list'));
+
+// MARK: Soundboard
+const _soundboard = __SOUNDBOARD_JSON__;
+const _soundboardAudio = {};
+(function() {
+  for (const slot in _soundboard) {
+    const audio = new Audio(_soundboard[slot]);
+    audio.preload = 'auto';
+    _soundboardAudio[slot] = audio;
+  }
+})();
+
+document.addEventListener('keydown', (e) => {
+  if (overlay.classList.contains('open')) return;
+  // Numpad1–Numpad9 or digit keys 1–9 trigger soundboard slots
+  let slot = null;
+  if (e.code && e.code.startsWith('Numpad') && e.code.length === 7) {
+    const n = e.code.slice(6);
+    if (n >= '1' && n <= '9') slot = n;
+  } else if (!e.altKey && !e.ctrlKey && !e.metaKey && e.key >= '1' && e.key <= '9') {
+    slot = e.key;
+  }
+  // 0 / Numpad0 stops all playback
+  const isZero = e.key === '0' || e.code === 'Numpad0';
+  if (isZero && Object.keys(_soundboardAudio).length) {
+    e.preventDefault();
+    for (const a of Object.values(_soundboardAudio)) { a.pause(); a.currentTime = 0; }
+    return;
+  }
+  if (slot && _soundboardAudio[slot]) {
+    e.preventDefault();
+    const audio = _soundboardAudio[slot];
+    audio.currentTime = 0;
+    audio.play().catch((err) => { console.error('[soundboard] slot ' + slot + ':', err); });
+  }
+});
 </script>
 </body></html>
