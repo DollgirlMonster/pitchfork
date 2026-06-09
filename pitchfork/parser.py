@@ -32,9 +32,6 @@ def detect_layout(content: str, zones: dict) -> Optional[str]:
     if heading_lines and not body_lines:
         return "title" if len(heading_lines) <= 2 else "section"
 
-    if len(lines) == 1 and lines[0].startswith("# "):
-        return "section"
-
     # Count lines inside fenced code blocks
     code_lines = 0
     in_fence = False
