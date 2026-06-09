@@ -83,7 +83,7 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
     source = deck_path.read_text(encoding="utf-8")
     slides = parse_deck(source, default_layout)
     total  = len(slides)
-    init_layouts(deck_path)
+    init_layouts(deck_path, cwd=Path.cwd())
 
     pkg_dir  = Path(__file__).resolve().parent
     tmpl_dir = pkg_dir / "templates"
@@ -94,11 +94,11 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
         (tmpl_dir / name).read_text(encoding="utf-8") for name in _CSS_PARTIALS
     )
 
-    user_css_path = deck_path.parent / "styles.css"
+    user_css_path = Path.cwd() / "styles.css"
     user_css = user_css_path.read_text(encoding="utf-8") if user_css_path.exists() else ""
 
     logo_uri = ""
-    logo_path = deck_path.parent / "logo.png"
+    logo_path = Path.cwd() / "logo.png"
     if logo_path.exists():
         logo_uri = "data:image/png;base64," + base64.b64encode(logo_path.read_bytes()).decode()
 

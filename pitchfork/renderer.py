@@ -22,10 +22,10 @@ _body_layout: Layout = Layout(
 )
 
 
-def init_layouts(deck_path: Path) -> None:
+def init_layouts(deck_path: Path, cwd: Optional[Path] = None) -> None:
     """Load (or reload) layouts for the given deck. Call at startup and on file-change."""
     global _layouts
-    _layouts = load_layouts(deck_path)
+    _layouts = load_layouts(deck_path, cwd=cwd)
 
 
 def md(text: str) -> str:

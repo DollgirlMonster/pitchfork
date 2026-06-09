@@ -275,14 +275,14 @@ def cmd_serve(args):
         print(f"  File not found: {deck_path}")
         sys.exit(1)
 
-    css_path = deck_path.parent / "styles.css"
+    css_path = cwd / "styles.css"
     config = load_config(deck_path)
     default_layout = config.get("deck", {}).get("default_layout", "body")
     port = args.port    # TODO: handle port in use; just go up 2 at a time until we find a free one
 
     # Initial parse
     from pitchfork.renderer import init_layouts
-    init_layouts(deck_path)
+    init_layouts(deck_path, cwd=cwd)
     source = deck_path.read_text(encoding="utf-8")
     slides = parse_deck(source, default_layout)
     slides_json = json.dumps(slides_to_json_payload(slides))
@@ -293,7 +293,7 @@ def cmd_serve(args):
     soundboard = {str(k): v for k, v in raw_soundboard.items() if str(k).isdigit() and 1 <= int(str(k)) <= 9}
     soundboard_json = json.dumps(soundboard)
 
-    server = PitchforkServer(deck_path, css_path, host="localhost", port=port)
+    server = PitchforkServer(deck_path, css_path, host="localhost", port=port, cwd=cwd)
     server.default_layout = default_layout
     server.set_slides_json(slides_json)
     server.set_chapters_json(chapters_json)
@@ -303,7 +303,7 @@ def cmd_serve(args):
 
     async def main():
         loop = asyncio.get_running_loop()
-        watcher = start_watcher(deck_path, css_path, server, loop)
+        watcher = start_watcher(deck_path, css_path, server, loop, cwd=cwd)
         try:
             if not args.no_open:
                 webbrowser.open(f"http://localhost:{port}/slides")

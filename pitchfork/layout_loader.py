@@ -2,8 +2,9 @@
 Discovers and loads layout plugins.
 
 Load order (first match wins):
-  1. Sidecar _layouts/ folder next to the deck file (user-defined)
-  2. Built-in layouts (pitchfork/layouts/)
+  1. cwd/_layouts  — root where pitchfork was launched
+  2. deck_dir/_layouts — sidecar next to the deck file (when different from cwd)
+  3. Built-in layouts (pitchfork/layouts/)
 
 Within each group, files are loaded alphabetically. Prefix filenames
 with numbers (e.g. 01-my-layout.py) to control ordering explicitly.
@@ -44,14 +45,16 @@ def _load_layout_file(path: Path) -> Optional[Layout]:
         return None
 
 
-def load_layouts(deck_path: Path) -> List[Layout]:
+def load_layouts(deck_path: Path, cwd: Optional[Path] = None) -> List[Layout]:
     """
-    Return an ordered list of layouts. Sidecar layouts come first so they
-    take priority over built-ins with the same name. Within each group,
-    files are sorted alphabetically.
+    Return an ordered list of layouts. Load order (first match wins):
+      1. cwd/_layouts (root where pitchfork was launched, when different from deck dir)
+      2. deck_path.parent/_layouts (sidecar next to the deck file)
+      3. Built-in layouts
+    Within each group, files are sorted alphabetically.
     """
     layouts: List[Layout] = []
-    seen_names: set = set()
+    seen_names: set[str] = set()
 
     def _load_dir(directory: Path, label: str) -> None:
         if not directory.is_dir():
@@ -69,10 +72,16 @@ def load_layouts(deck_path: Path) -> List[Layout]:
             seen_names.add(layout.name)
             logger.debug("Loaded layout '%s' from %s", layout.name, label)
 
-    # 1. Sidecar layouts win
-    _load_dir(deck_path.parent / "_layouts", "sidecar")
+    cwd = cwd or deck_path.parent
 
-    # 2. Built-in layouts
+    # 1. cwd/_layouts wins (root where pitchfork was launched)
+    _load_dir(cwd / "_layouts", "cwd")
+
+    # 2. Sidecar layouts next to deck (only when different from cwd)
+    if cwd.resolve() != deck_path.parent.resolve():
+        _load_dir(deck_path.parent / "_layouts", "sidecar")
+
+    # 3. Built-in layouts
     _load_dir(Path(__file__).parent / "layouts", "built-in")
 
     return layouts

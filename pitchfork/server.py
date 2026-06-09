@@ -50,12 +50,14 @@ class PitchforkServer:
         deck_path: Path,
         css_path: Path,
         host: str = "localhost",
-        port: int = 1312
+        port: int = 1312,
+        cwd: Optional[Path] = None,
     ):
         self.deck_path = deck_path
         self.css_path = css_path
         self.host = host
         self.port = port
+        self.cwd = cwd or deck_path.parent
         self.clients: Set[WebSocketServerProtocol] = set()
         self.slides_json: str = "[]"
         self.chapters_json: str = "[]"
@@ -150,15 +152,25 @@ class PitchforkServer:
             rel = Path(path.lstrip("/"))
             if ".." in rel.parts:
                 return None
-            candidate = (self.deck_path.parent / rel).resolve()
-            candidate.relative_to(self.deck_path.parent.resolve())  # must stay inside deck dir
         except Exception:
             return None
 
-        if not candidate.is_file():
-            return None
+        # Check cwd first (root of where pitchfork was launched),
+        # then fall back to the deck's own directory.
+        roots = [self.cwd]
+        if self.deck_path.parent.resolve() != self.cwd.resolve():
+            roots.append(self.deck_path.parent)
 
-        return candidate.read_bytes(), MIME_TYPES.get(candidate.suffix.lower(), "application/octet-stream")
+        for root in roots:
+            try:
+                candidate = (root / rel).resolve()
+                candidate.relative_to(root.resolve())  # must stay inside root
+                if candidate.is_file():
+                    return candidate.read_bytes(), MIME_TYPES.get(candidate.suffix.lower(), "application/octet-stream")
+            except Exception:
+                continue
+
+        return None
 
     async def _http_handler(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
