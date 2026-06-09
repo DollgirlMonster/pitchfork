@@ -3,7 +3,7 @@ Renders Slide objects to HTML fragments using markdown + highlight.js.
 Layout selection is handled by layout_loader.
 """
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Optional
 
 import re
 import html
