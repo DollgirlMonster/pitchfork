@@ -55,11 +55,6 @@ def md(text: str) -> str:
     return _SCRIPT_STYLE_BR_RE.sub(_remove_br, result)
 
 
-_MD_QR_ANCHOR_RE = re.compile(
-    r'(?i)<a\b[^>]*href=("|\')(?P<href>.*?)(?:\1)[^>]*>\s*(?:<(?:strong|b)>)?\s*qr\s*(?:</(?:strong|b)>)?\s*</a>'
-)
-
-
 def replace_qr_placeholders(html_text: str) -> str:
     """Replace `<a ...>QR</a>` anchors with `.pf-qr` placeholders.
 
@@ -72,6 +67,9 @@ def replace_qr_placeholders(html_text: str) -> str:
         href_esc = html.escape(href, quote=True)
         return f'<div class="pf-qr" data-value="{href_esc}" data-size="160"></div>'
 
+    _MD_QR_ANCHOR_RE = re.compile(
+        r'(?i)<a\b[^>]*href=("|\')(?P<href>.*?)(?:\1)[^>]*>\s*(?:<(?:strong|b)>)?\s*qr\s*(?:</(?:strong|b)>)?\s*</a>'
+    )
     return _MD_QR_ANCHOR_RE.sub(_repl, html_text)
 
 
