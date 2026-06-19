@@ -282,9 +282,9 @@ def cmd_serve(args):
 
     # Initial parse
     from pitchfork.renderer import init_layouts
-    init_layouts(deck_path, cwd=cwd)
+    init_layouts(deck_path, cwd=cwd, default_layout=default_layout)
     source = deck_path.read_text(encoding="utf-8")
-    slides = parse_deck(source, default_layout)
+    slides = parse_deck(source)
     slides_json = json.dumps(slides_to_json_payload(slides))
     chapters_json = json.dumps(chapters_json_payload(slides))
 

@@ -81,9 +81,9 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
         w, h = 1920, 1080
 
     source = deck_path.read_text(encoding="utf-8")
-    slides = parse_deck(source, default_layout)
+    init_layouts(deck_path, cwd=Path.cwd(), default_layout=default_layout)
+    slides = parse_deck(source)
     total  = len(slides)
-    init_layouts(deck_path, cwd=Path.cwd())
 
     pkg_dir  = Path(__file__).resolve().parent
     tmpl_dir = pkg_dir / "templates"

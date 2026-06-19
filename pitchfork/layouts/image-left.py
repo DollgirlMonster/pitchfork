@@ -34,5 +34,3 @@ def html(slide, md) -> str:
             f'<div class="image-text">{text_body}</div>'
             "</div>"
         )
-    # Fallback
-    return f'<div class="slide-layout body">{md(slide.content)}</div>'

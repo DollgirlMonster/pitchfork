@@ -16,49 +16,6 @@ class Slide:
     chapter: Optional[str] = None
 
 
-def detect_layout(content: str, zones: dict) -> Optional[str]:
-    """Heuristic layout detection based on content. Returns None if no guess can be made."""
-    stripped = content.strip()
-
-    if zones:
-        keys = set(zones.keys())
-        if {"left", "right"} & keys:
-            return "two-column"
-
-    lines = [l for l in stripped.splitlines() if l.strip()]
-    heading_lines = [l for l in lines if l.startswith("#")]
-    body_lines = [l for l in lines if not l.startswith("#")]
-
-    if heading_lines and not body_lines:
-        return "title" if len(heading_lines) <= 2 else "section"
-
-    # Count lines inside fenced code blocks
-    code_lines = 0
-    in_fence = False
-    for line in stripped.splitlines():
-        if line.strip().startswith("```"):
-            in_fence = not in_fence
-            continue  # don't count the fence markers themselves
-        if in_fence:
-            code_lines += 1
-    total_lines = max(len(stripped.splitlines()), 1)
-    if code_lines / total_lines > 0.5 and total_lines > 3:
-        return "code"
-
-    clean = re.sub(r"<!--.*?-->", "", stripped, flags=re.DOTALL)
-    images = list(re.finditer(r"!\[.*?\]\(.*?\)", clean))
-    if len(images) == 1:
-        img = images[0]
-        before = clean[: img.start()].strip()
-        after = clean[img.end() :].strip()
-        if not before and after:
-            return "image-left"
-        if before and not after:
-            return "image-right"
-
-    return None
-
-
 def parse_zones(content: str) -> Tuple[str, Dict[str, str]]:
     """Extract ::zone:: markers from content, return cleaned content and zones dict."""
     zone_pattern = re.compile(r"^::(\w+)::\s*$", re.MULTILINE)
@@ -89,8 +46,9 @@ def extract_marks(source: str) -> List[Tuple[int, str]]:
     return [(m.start(), m.group(1)) for m in mark_pattern.finditer(source)]
 
 
-def parse_deck(source: str, default_layout: str = "body") -> List[Slide]:
-    """Parse a full .md deck string into a list of Slide objects."""
+def parse_deck(source: str) -> List[Slide]:
+    """Parse a full .md deck string into a list of Slide objects.
+    """
     # Pre-pass: collect MARK positions before any splitting modifies offsets.
     marks = extract_marks(source)
 
@@ -125,21 +83,15 @@ def parse_deck(source: str, default_layout: str = "body") -> List[Slide]:
         slide_body = parts[0].strip()
         notes = parts[1].strip() if len(parts) > 1 else ""
 
-        # Check for explicit layout override: first line like "::layout:name::"
-        explicit_layout = None
+        # Layout: explicit ::layout:name:: marker, or None (resolved at render time)
+        layout = None
         layout_marker = re.match(r"^::layout:([^\s:]+)::\s*$", slide_body, re.MULTILINE)
         if layout_marker:
-            explicit_layout = layout_marker.group(1)
+            layout = layout_marker.group(1)
             slide_body = slide_body[layout_marker.end():].strip()
 
         # Parse zone markers
         content, zones = parse_zones(slide_body)
-
-        # Determine layout
-        if explicit_layout:
-            layout = explicit_layout
-        else:
-            layout = detect_layout(content, zones) or default_layout
 
         slides.append(Slide(
             index=len(slides),

@@ -34,5 +34,3 @@ def html(slide, md) -> str:
             f'<div class="img-container">{img}</div>'
             "</div>"
         )
-    # Fallback — image regex matched but md() didn't find it (shouldn't happen)
-    return f'<div class="slide-layout body">{md(slide.content)}</div>'

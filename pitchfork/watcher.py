@@ -60,9 +60,9 @@ class DeckChangeHandler(FileSystemEventHandler):
 
     def _reload_deck(self) -> None:
         try:
-            init_layouts(self.deck_path, cwd=self.cwd)
+            init_layouts(self.deck_path, cwd=self.cwd, default_layout=self.server.default_layout)
             source = self.deck_path.read_text(encoding="utf-8")
-            slides = parse_deck(source, self.server.default_layout)
+            slides = parse_deck(source)
             self.server.set_slides_json(json.dumps(slides_to_json_payload(slides)))
             self.server.set_chapters_json(json.dumps(chapters_json_payload(slides)))
             asyncio.run_coroutine_threadsafe(

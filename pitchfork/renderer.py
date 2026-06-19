@@ -8,24 +8,24 @@ from typing import Dict, List, Optional
 import re
 import html
 import markdown
-from pitchfork.layout_loader import Layout, load_layouts, pick_layout
+from pitchfork.layout_loader import Layout, load_layouts, resolve_layout
 from pitchfork.parser import Slide
 
 # Module-level layout list — populated by init_layouts() at startup.
 _layouts: List[Layout] = []
-# Fallback body layout used when nothing else matches.
-_body_layout: Layout = Layout(
-    name="body",
-    match=lambda slide: False,
-    html=lambda slide, md_fn: f'<div class="slide-layout body">{md_fn(slide.content)}</div>',
-    source=Path(__file__),
-)
+# Name of the fallback layout when no match() claims a slide. Mirrors .pitchfork default_layout.
+_default_layout_name: str = "body"
+# Last-resort HTML when resolve_layout() can't even find the default_layout
+# name (e.g. the built-in body.py itself failed to load). A bare string, not
+# a Layout — there is nothing left to drift out of sync with.
+_FALLBACK_HTML = '<div class="slide-layout body">{content}</div>'
 
 
-def init_layouts(deck_path: Path, cwd: Optional[Path] = None) -> None:
+def init_layouts(deck_path: Path, cwd: Optional[Path] = None, default_layout: str = "body") -> None:
     """Load (or reload) layouts for the given deck. Call at startup and on file-change."""
-    global _layouts
+    global _layouts, _default_layout_name
     _layouts = load_layouts(deck_path, cwd=cwd)
+    _default_layout_name = default_layout
 
 
 def md(text: str) -> str:
@@ -74,8 +74,17 @@ def replace_qr_placeholders(html_text: str) -> str:
 
 
 def render_slide_html(slide: Slide) -> str:
-    """Render a slide's content area as an HTML fragment."""
-    layout = pick_layout(_layouts, slide, explicit_name=slide.layout) or _body_layout
+    """Render a slide's content area as an HTML fragment.
+
+    Layout selection itself (explicit marker, auto-detect, configured
+    default) is owned entirely by layout_loader.resolve_layout — this
+    function only turns the result into HTML.
+    """
+    layout = resolve_layout(_layouts, slide, _default_layout_name)
+    if layout is None:
+        # Catastrophic: not even the default_layout name loaded.
+        # Raw markdown beats a crash during a live presentation.
+        return _FALLBACK_HTML.format(content=md(slide.content))
     try:
         html_out = layout.html(slide, md)
         return replace_qr_placeholders(html_out)

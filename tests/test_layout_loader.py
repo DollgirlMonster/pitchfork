@@ -2,19 +2,59 @@ import unittest
 import tempfile
 from pathlib import Path
 
-from pitchfork.layout_loader import load_layouts, pick_layout, Layout
+from pitchfork.layout_loader import load_layouts, lookup_by_name, detect, resolve_layout, Layout
 from pitchfork.parser import Slide
 
 
 class TestLayoutLoader(unittest.TestCase):
-    def test_pick_layout_by_name(self):
+    def test_lookup_by_name(self):
         layouts = [
             Layout(name="a", match=lambda s: True, html=lambda s, md: "a", source=Path("/tmp/a.py")),
             Layout(name="b", match=lambda s: False, html=lambda s, md: "b", source=Path("/tmp/b.py")),
         ]
+        self.assertIs(lookup_by_name(layouts, "b"), layouts[1])
+        self.assertIsNone(lookup_by_name(layouts, "missing"))
+
+    def test_detect_returns_first_match(self):
+        layouts = [
+            Layout(name="a", match=lambda s: False, html=lambda s, md: "a", source=Path("/tmp/a.py")),
+            Layout(name="b", match=lambda s: True, html=lambda s, md: "b", source=Path("/tmp/b.py")),
+            Layout(name="c", match=lambda s: True, html=lambda s, md: "c", source=Path("/tmp/c.py")),
+        ]
         slide = Slide(0, None, "", "")
-        self.assertIs(pick_layout(layouts, slide, explicit_name="b"), layouts[1])
-        self.assertIsNone(pick_layout(layouts, slide, explicit_name="missing"))
+        self.assertIs(detect(layouts, slide), layouts[1])
+
+    def test_detect_returns_none_when_nothing_matches(self):
+        layouts = [Layout(name="a", match=lambda s: False, html=lambda s, md: "a", source=Path("/tmp/a.py"))]
+        slide = Slide(0, None, "", "")
+        self.assertIsNone(detect(layouts, slide))
+
+    def test_resolve_layout_explicit_name_wins(self):
+        layouts = [
+            Layout(name="a", match=lambda s: True, html=lambda s, md: "a", source=Path("/tmp/a.py")),
+            Layout(name="b", match=lambda s: False, html=lambda s, md: "b", source=Path("/tmp/b.py")),
+        ]
+        slide = Slide(0, "b", "", "")
+        self.assertIs(resolve_layout(layouts, slide, default_name="a"), layouts[1])
+
+    def test_resolve_layout_explicit_miss_does_not_fall_through(self):
+        """A typo'd ::layout:: marker must not get silently reinterpreted by auto-detect."""
+        layouts = [Layout(name="a", match=lambda s: True, html=lambda s, md: "a", source=Path("/tmp/a.py"))]
+        slide = Slide(0, "does-not-exist", "", "")
+        self.assertIsNone(resolve_layout(layouts, slide, default_name="a"))
+
+    def test_resolve_layout_falls_back_to_detect(self):
+        layouts = [
+            Layout(name="a", match=lambda s: False, html=lambda s, md: "a", source=Path("/tmp/a.py")),
+            Layout(name="b", match=lambda s: True, html=lambda s, md: "b", source=Path("/tmp/b.py")),
+        ]
+        slide = Slide(0, None, "", "")
+        self.assertIs(resolve_layout(layouts, slide, default_name="a"), layouts[1])
+
+    def test_resolve_layout_falls_back_to_default_name(self):
+        layouts = [Layout(name="a", match=lambda s: False, html=lambda s, md: "a", source=Path("/tmp/a.py"))]
+        slide = Slide(0, None, "", "")
+        self.assertIs(resolve_layout(layouts, slide, default_name="a"), layouts[0])
 
     def test_load_layouts_sidecar_overrides_builtins(self):
         with tempfile.TemporaryDirectory() as tmpdir:

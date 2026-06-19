@@ -87,11 +87,27 @@ def load_layouts(deck_path: Path, cwd: Optional[Path] = None) -> List[Layout]:
     return layouts
 
 
-def pick_layout(layouts: List[Layout], slide, explicit_name: Optional[str] = None) -> Optional[Layout]:
-    """
-    If explicit_name is given, return the matching layout by name (or None).
-    Otherwise walk the list and return the first layout whose match() is truthy.
-    """
-    if explicit_name:
-        return next((l for l in layouts if l.name == explicit_name), None)
+def lookup_by_name(layouts: List[Layout], name: str) -> Optional[Layout]:
+    """Return the layout with this exact name, or None"""
+    return next((l for l in layouts if l.name == name), None)
+
+
+def detect(layouts: List[Layout], slide) -> Optional[Layout]:
+    """Walk the list and return the first layout whose match() is truthy"""
     return next((l for l in layouts if l.match(slide)), None)
+
+
+def resolve_layout(layouts: List[Layout], slide, default_name: str) -> Optional[Layout]:
+    """
+    Decide which layout renders this slide
+
+    An explicit ::layout:name:: marker: look it up by name
+        A typo'd override should fall to the body fallback, not get silently reinterpreted by auto-detect.
+    
+    Otherwise: auto-detect via match(), 
+    Then the configured default_layout name
+    
+    Returns None only if nothing at all resolves"""
+    if slide.layout:
+        return lookup_by_name(layouts, slide.layout)
+    return detect(layouts, slide) or lookup_by_name(layouts, default_name)
