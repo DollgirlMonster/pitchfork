@@ -2,12 +2,24 @@
 
 Write slides in Markdown, present in the browser. Easy as.
 
+![Pitchfork](/screenshots/title-slide.png)
+
 If this software is useful, please donate! I can't live without you.
 [Support Monthly](https://patreon.com/ellieonline)
 [One-Off Donation](https://ko-fi.com/ellieonline)
 
+## Features
+
+- Draw on slides!
+- Soundboard support!
+- Arbitrary extension via `<iframe>` and `.py` layout files!
+- Live-reload during edit!
+
+![Drawing on Slides](/screenshots/draw.png)
+
 ## Install
 
+First, download Pitchfork. Then, install with `pip`:
 ```bash
 cd /path/to/pitchfork
 pip install .
@@ -30,6 +42,10 @@ pitchfork serve         # opens slides in the browser, live-reloads on updates
 | **Notes delimiter** | `%%%` on its own line — everything until the next `---` is notes |
 | **Explicit layout override** | `::layout:<layout-name>::` as the first line of a slide. More info about Layouts in the Layouts section below. |
 | **Chapter marker** | `<!-- MARK: Chapter Title -->` tags the slide as a chapter start (and highlights it in the VSCode sidebar!) |
+
+
+| ![Pitchfork](/screenshots/what-is-usability.png) | ![Code](/screenshots/what-is-usability-code.png) |
+|---|---|
 
 ### Example:
 ```markdown
