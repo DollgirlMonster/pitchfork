@@ -264,7 +264,7 @@ An Example:
 <iframe src="/timer?duration=15m" height=200></iframe>
 ```
 
-## QR Codes
+### QR Codes
 
 Links whose text is "QR" (case-insensitive) are converted into QR codes when you present your slides. The QR code will size to fit the available width.
 
@@ -274,6 +274,17 @@ Usage:
 
 ```markdown
 [QR](https://example.com)
+```
+
+### Soundboard
+
+Add a `[soundboard]` section in your `.pitchfork` sidecar to define links to sound effects for your deck. Trigger them using the numpad keys.
+
+```
+[soundboard]
+1 = "soundboard/Bingo!.mp3"
+3 = "soundboard/Buzzer.mp3"
+7 = "soundboard/Mission Start.mp3"
 ```
 
 ## Export
