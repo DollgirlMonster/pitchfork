@@ -56,7 +56,8 @@ def md(text: str) -> str:
 
 
 def replace_qr_placeholders(html_text: str) -> str:
-    """Replace `<a ...>QR</a>` anchors with `.pf-qr` placeholders.
+    """Replace `<a ...>QR</a>` anchors and `<img alt="QR" ...>` tags with
+    `.pf-qr` placeholders.
 
     This is a separate step in the rendering pipeline so `md()` stays
     focused on markdown → HTML conversion.
@@ -70,7 +71,11 @@ def replace_qr_placeholders(html_text: str) -> str:
     _MD_QR_ANCHOR_RE = re.compile(
         r'(?i)<a\b[^>]*href=("|\')(?P<href>.*?)(?:\1)[^>]*>\s*(?:<(?:strong|b)>)?\s*qr\s*(?:</(?:strong|b)>)?\s*</a>'
     )
-    return _MD_QR_ANCHOR_RE.sub(_repl, html_text)
+    _MD_QR_IMG_RE = re.compile(
+        r'(?i)<img\b(?=[^>]*\balt=("|\')\s*qr\s*\1)(?=[^>]*\bsrc=("|\')(?P<href>.*?)\2)[^>]*/?>'
+    )
+    html_text = _MD_QR_ANCHOR_RE.sub(_repl, html_text)
+    return _MD_QR_IMG_RE.sub(_repl, html_text)
 
 
 def render_slide_html(slide: Slide) -> str:
