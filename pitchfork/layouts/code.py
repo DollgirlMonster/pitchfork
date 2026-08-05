@@ -6,10 +6,16 @@ inside fenced code blocks.
 """
 
 
+import re
+
+_COMMENT_RE = re.compile(r'<!--.*?-->', re.DOTALL)
+
+
 def match(slide) -> bool:
     if slide.zones:
         return False
-    stripped = slide.content.strip()
+    # Ensure MARK tags and reveal-step sentinels don't count against the code-to-prose ratio.
+    stripped = _COMMENT_RE.sub('', slide.content).strip()
     lines = stripped.splitlines()
     total = len(lines)
     if total < 4:
