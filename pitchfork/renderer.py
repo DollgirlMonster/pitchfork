@@ -53,6 +53,7 @@ def md(text: str) -> str:
     result = markdown.markdown(
         text,
         extensions=["fenced_code", "tables", "nl2br", "sane_lists", "pymdownx.tasklist"],
+        extension_configs={"pymdownx.tasklist": {"clickable_checkbox": True}},
     )
 
     # Problem: nl2br doesn't know about HTML structure, so it inserts <br> on
