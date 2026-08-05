@@ -162,7 +162,7 @@
 
 /* MARK: agenda */
 /* Built from chapters. Each item carries state as class, so you can restyle
-   .is-done / .is-current / .is-upcoming / .agenda-empty in your styles.css */
+   .is-done / .is-current / .is-upcoming in your styles.css */
 .slide-layout.agenda {
   & .pf-agenda {
     list-style: none;
