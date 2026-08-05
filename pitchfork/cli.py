@@ -5,17 +5,16 @@ import argparse
 import asyncio
 import json
 import re
+import shutil
 import sys
 import webbrowser
 from pathlib import Path
 from typing import Optional
 
-# I'm still using 3.8, :')
 try:
     import tomllib
 except ImportError:
     import tomli as tomllib
-
 
 DEFAULT_CSS = """\
 /*  Pitchfork Styles
@@ -148,10 +147,87 @@ If Pitchfork improves your workflow, please donate! I can't live without you.
 """
 
 
+# Are we on POSIX? Otherwise, fall back for windows
+try:
+    import termios
+    import tty
+    _HAS_TERMIOS = True
+except ImportError:
+    _HAS_TERMIOS = False
+
 def _natural_sort_key(s: str):
     # Sort strings naturally, e.g. "Week 2" before "Week 10".
     parts = re.split(r"(\d+)", s)
     return [int(p) if p.isdigit() else p.lower() for p in parts]
+
+_PICKER_HEADER = "Multiple .md files found (\u2191/\u2193 or j/k, Enter to pick; or type a number):"
+def _pick_index(labels: list) -> int:
+    """File picker: up/down or j/k move, Enter selects, digits + Enter jump to a number."""
+    width, height = shutil.get_terminal_size((80, 24))
+    n = len(labels)
+    visible = max(1, min(n, height - 2))
+    idx = top = 0
+    numbuf = ""
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+
+    def clip(s):
+        return s if len(s) < width else s[: width - 1] + "\u2026"
+
+    def render(first):
+        nonlocal top
+        if idx < top:
+            top = idx
+        elif idx >= top + visible:
+            top = idx - visible + 1
+
+        lines = [_PICKER_HEADER]
+        for i in range(top, top + visible):
+            marker = "> " if i == idx else "  "
+            lines.append(clip(f"{marker}{i + 1}. {labels[i]}"))
+        lines.append(f"> {numbuf}" if numbuf else "")
+        if not first:
+            sys.stdout.write(f"\x1b[{len(lines)}A")
+        for line in lines:
+            sys.stdout.write("\r\x1b[2K" + line + "\n")
+        sys.stdout.flush()
+
+    try:
+        tty.setraw(fd)
+        render(first=True)
+        while True:
+            ch = sys.stdin.read(1)
+            match ch:
+                case "\x1b": # Arrow key
+                    match sys.stdin.read(2):
+                        case "[A": # Up arrow
+                            idx = (idx - 1) % n
+                            numbuf = ""
+                        case "[B": # Down arrow
+                            idx = (idx + 1) % n
+                            numbuf = ""
+                case "k" | "K":
+                    idx = (idx - 1) % n
+                    numbuf = ""
+                case "j" | "J":
+                    idx = (idx + 1) % n
+                    numbuf = ""
+                case "\r" | "\n":
+                    if numbuf:
+                        m = int(numbuf) - 1
+                        if 0 <= m < n:
+                            idx = m
+                    break
+                case "\x03": # Ctrl-C
+                    raise KeyboardInterrupt
+                case _ if ch.isdigit(): # Handle numbers
+                    numbuf += ch
+                case _: # Clear number buffer on other keys (like backspace)
+                    numbuf = ""
+            render(first=False)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return idx
 
 
 def find_deck(cwd: Path) -> Optional[Path]:
@@ -168,15 +244,21 @@ def find_deck(cwd: Path) -> Optional[Path]:
     if len(mds) == 1:
         return mds[0]
     if len(mds) > 1:
-        print("Multiple .md files found:")
-        for i, p in enumerate(mds):
-            print(f"  {i+1}. {p.relative_to(cwd)}")
+        labels = [str(p.relative_to(cwd)) for p in mds]
+
+        if _HAS_TERMIOS and sys.stdin.isatty(): # POSIX gets interactive picker
+            return mds[_pick_index(labels)]
+        
+        print("Multiple .md files found:")      # Windows uses old behavior: number picker
+        for i, label in enumerate(labels):
+            print(f"  {i+1}. {label}")
         choice = input("Pick one (number): ").strip()
         try:
             return mds[int(choice) - 1]
         except (ValueError, IndexError):
             print("Invalid choice.")
             sys.exit(1)
+            
     return None
 
 
@@ -348,8 +430,10 @@ def main():
 
     args = parser.parse_args()
 
+    # 𓌹⋆♆⋆𓌺 <- bat face
     print("""
-PITCHFORK :: Bullshit-Free Slides
+  \U00013339\u22c6\u2646\u22c6\U0001333a
+PITCHFORK
 
 If Pitchfork improves your workflow, please consider donating! I can't live without you.
    Support Monthly:  https://patreon.com/ellieonline
