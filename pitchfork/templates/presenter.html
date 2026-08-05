@@ -41,14 +41,39 @@ let timerSeconds = 0, timerInterval = null;
 const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
-  if (msg.type === 'navigate') { current = msg.index; render(); }
+  if (msg.type === 'navigate') { current = msg.index; step = msg.step || 0; render(); }
   if (msg.type === 'reload') { location.hash = '#' + current; location.reload(); }
 };
 
-function navigate(idx) {
+// Reveal step within the current slide. This view always shows the slide fully
+// built — it just has to drive and stay in sync with the slides window.
+let step = 0;
+
+function maxStep(idx) {
+  const slide = slides[idx];
+  return (slide && slide.steps) || 0;
+}
+
+function goTo(idx, wantStep) {
   current = Math.max(0, Math.min(slides.length - 1, idx));
+  const target = wantStep === 'last' ? maxStep(current) : (wantStep || 0);
+  step = Math.max(0, Math.min(maxStep(current), target));
   render();
-  ws.send(JSON.stringify({ type: 'navigate', index: current }));
+  ws.send(JSON.stringify({ type: 'navigate', index: current, step: step }));
+}
+
+function navigate(idx) {
+  goTo(idx, 0);
+}
+
+function advance() {
+  if (step < maxStep(current)) goTo(current, step + 1);
+  else goTo(current + 1, 0);
+}
+
+function retreat() {
+  if (step > 0) goTo(current, step - 1);
+  else if (current > 0) goTo(current - 1, 'last');
 }
 
 // MARK: Chapter Utilities
@@ -195,8 +220,8 @@ document.addEventListener('keydown', (e) => {
     return; // swallow other keys while overlay is open
   }
   if (e.key === 'c') { openChapterOverlay(); return; }
-  if (e.key === 'ArrowRight' || e.key === 'j' || e.key === ' ') navigate(current + 1);
-  if (e.key === 'ArrowLeft'  || e.key === 'k') navigate(current - 1);
+  if (e.key === 'ArrowRight' || e.key === 'j' || e.key === ' ') advance();
+  if (e.key === 'ArrowLeft'  || e.key === 'k') retreat();
   if (e.key === 't') window.open('/timer', '_blank');
 });
 

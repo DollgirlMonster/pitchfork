@@ -93,3 +93,17 @@
 .slide-chapter-upcoming-item {
   color: var(--pf-muted);
 }
+
+/* MARK: reveal steps */
+/* A line that is just `--` splits a slide into steps. Steps are only
+   hidden in slides view.
+   
+   Hidden steps keep their space so revealing doesn't reflow the slide. */
+#slide-content [data-pf-step] {
+  transition: opacity 0.18s ease;
+}
+
+#slide-content [data-pf-step].pf-step-hidden {
+  visibility: hidden;
+  opacity: 0;
+}
