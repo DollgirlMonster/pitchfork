@@ -14,7 +14,25 @@ from urllib.parse import unquote
 import websockets
 from websockets.server import WebSocketServerProtocol
 
+from pitchfork.layout_loader import DEFAULT_LAYOUT_NAME
+
 logger = logging.getLogger(__name__)
+
+# Everything the server knows how to hand back. The watcher reads this too, so
+# that "files worth reloading for" and "files we can serve" stay the same set.
+MIME_TYPES = {
+    ".html": "text/html", ".htm": "text/html",
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".png": "image/png", ".gif": "image/gif",
+    ".webp": "image/webp", ".svg": "image/svg+xml",
+    ".tif": "image/tiff", ".tiff": "image/tiff",
+    ".mp4": "video/mp4", ".webm": "video/webm",
+    ".mp3": "audio/mpeg", ".wav": "audio/wav",
+    ".ogg": "audio/ogg", ".flac": "audio/flac",
+    ".aac": "audio/aac",
+    ".pdf": "application/pdf",
+    ".js": "text/javascript", ".woff2": "font/woff2",
+}
 
 
 def parse_duration(s: Optional[str]) -> Optional[int]:
@@ -61,7 +79,8 @@ class PitchforkServer:
         self.clients: Set[WebSocketServerProtocol] = set()
         self.slides_json: str = "[]"
         self.chapters_json: str = "[]"
-        self.default_layout: str = "body"
+        self.default_layout: str = DEFAULT_LAYOUT_NAME
+        self.config: Dict = {}
         self._css_dir = Path(__file__).parent
         self.soundboard_json: str = "{}"
 
@@ -135,19 +154,6 @@ class PitchforkServer:
 
         # Serve arbitrary files relative to the deck directory
         path = unquote(path)
-        MIME_TYPES = {
-            ".html": "text/html", ".htm": "text/html",
-            ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-            ".png": "image/png", ".gif": "image/gif",
-            ".webp": "image/webp", ".svg": "image/svg+xml",
-            ".tif": "image/tiff", ".tiff": "image/tiff",
-            ".mp4": "video/mp4", ".webm": "video/webm",
-            ".mp3": "audio/mpeg", ".wav": "audio/wav",
-            ".ogg": "audio/ogg", ".flac": "audio/flac",
-            ".aac": "audio/aac",
-            ".pdf": "application/pdf",
-            ".js": "text/javascript", ".woff2": "font/woff2",
-        }
         # Sanitise: prevent directory traversal
         try:
             rel = Path(path.lstrip("/"))
