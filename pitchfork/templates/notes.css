@@ -92,6 +92,23 @@
   cursor: pointer;
 }
 
+/* Only appears on slides that build, so it never takes space otherwise. */
+#step-indicator {
+  font-family: var(--pf-font-code);
+  font-size: 0.75rem;
+  color: var(--pf-muted);
+  letter-spacing: 0.06em;
+  padding: 0.4rem 1.5rem;
+  border-bottom: 1px solid var(--pf-border);
+  background: var(--pf-bg);
+  flex-shrink: 0;
+}
+
+/* Everything on this slide is revealed — the next press moves on. */
+#step-indicator.complete {
+  color: var(--pf-accent);
+}
+
 #notes-list {
   flex: 1;
   overflow-y: auto;

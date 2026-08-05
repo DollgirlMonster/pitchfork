@@ -15,55 +15,15 @@ const slides = __SLIDES_JSON__;
 const chapters = __CHAPTERS_JSON__;
 let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
 // Reveal step within the current slide. 0 through slides[i].steps
-// 0 = everything before the first `--`, `slides[i].steps` = everything revealed.
+// 0 = everything before the first `--`
+// `slides[i].steps` = everything revealed.
 let step = 0;
 
-const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
-ws.onmessage = (e) => {
-  const msg = JSON.parse(e.data);
-  if (msg.type === 'navigate') {
-    const movedSlide = msg.index !== current;
-    current = msg.index;
-    step = msg.step || 0;
-    if (movedSlide) { clearCanvas(); render(); } else { applyStep(); }
-  }
-  if (msg.type === 'reload') { _reloading = true; location.hash = '#' + current; location.reload(); }
-};
-
-function maxStep(idx) {
-  const slide = slides[idx];
-  return (slide && slide.steps) || 0;
-}
-
-function broadcastPosition() {
-  ws.send(JSON.stringify({ type: 'navigate', index: current, step: step }));
-}
-
-// wantStep may be a number, or 'last' to open a slide fully revealed (which is
-// what you want stepping backwards into it).
-function goTo(idx, wantStep) {
-  const clamped = Math.max(0, Math.min(slides.length - 1, idx));
-  const movedSlide = clamped !== current;
-  current = clamped;
-  const target = wantStep === 'last' ? maxStep(current) : (wantStep || 0);
-  step = Math.max(0, Math.min(maxStep(current), target));
-  if (movedSlide) { clearCanvas(); render(); } else { applyStep(); }
-  broadcastPosition();
-}
-
-function advance() {
-  if (step < maxStep(current)) goTo(current, step + 1);
-  else goTo(current + 1, 0);
-}
-
-function retreat() {
-  if (step > 0) goTo(current, step - 1);
-  else if (current > 0) goTo(current - 1, 'last');
-}
+initSocket();
 
 // Tag every element that follows a step sentinel with the step it belongs to.
 // Walking siblings rather than restructuring the DOM keeps builds working
-// inside ::zones:: — a `--` in ::left:: only affects that column.
+// inside ::zones::, so a `--` in ::left:: only affects that column.
 function assignSteps(root) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
   const marks = [];
@@ -84,15 +44,6 @@ function applyStep() {
   document.querySelectorAll('#slide-content [data-pf-step]').forEach(el => {
     el.classList.toggle('pf-step-hidden', Number(el.dataset.pfStep) > step);
   });
-}
-
-function currentChapterIndex() {
-  let idx = -1;
-  for (let i = 0; i < chapters.length; i++) {
-    if (chapters[i].index <= current) idx = i;
-    else break;
-  }
-  return idx;
 }
 
 function renderChapterStrip() {
@@ -124,7 +75,11 @@ function renderChapterStrip() {
   });
 }
 
-function render() {
+// movedSlide=false means only the step changed (a `--` reveal) - skip the
+// full rebuild so embedded iframes/videos and the draw canvas aren't reset.
+function render(movedSlide = true) {
+  if (!movedSlide) { applyStep(); return; }
+  clearCanvas();
   const slide = slides[current];
   const container = document.getElementById('slide-content');
   container.innerHTML = slide.html;
@@ -251,7 +206,6 @@ bindInteractiveGuard();
 
 // Track all spawned popup windows so they can be closed when presenter view closes
 const _spawnedWindows = [];
-let _reloading = false;
 
 function _openPopup(url, name, features) {
   const win = window.open(url, name, features);

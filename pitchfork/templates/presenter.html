@@ -38,54 +38,11 @@ const chapters = __CHAPTERS_JSON__;
 let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
 let timerSeconds = 0, timerInterval = null;
 
-const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
-ws.onmessage = (e) => {
-  const msg = JSON.parse(e.data);
-  if (msg.type === 'navigate') { current = msg.index; step = msg.step || 0; render(); }
-  if (msg.type === 'reload') { location.hash = '#' + current; location.reload(); }
-};
-
 // Reveal step within the current slide. This view always shows the slide fully
 // built — it just has to drive and stay in sync with the slides window.
 let step = 0;
 
-function maxStep(idx) {
-  const slide = slides[idx];
-  return (slide && slide.steps) || 0;
-}
-
-function goTo(idx, wantStep) {
-  current = Math.max(0, Math.min(slides.length - 1, idx));
-  const target = wantStep === 'last' ? maxStep(current) : (wantStep || 0);
-  step = Math.max(0, Math.min(maxStep(current), target));
-  render();
-  ws.send(JSON.stringify({ type: 'navigate', index: current, step: step }));
-}
-
-function navigate(idx) {
-  goTo(idx, 0);
-}
-
-function advance() {
-  if (step < maxStep(current)) goTo(current, step + 1);
-  else goTo(current + 1, 0);
-}
-
-function retreat() {
-  if (step > 0) goTo(current, step - 1);
-  else if (current > 0) goTo(current - 1, 'last');
-}
-
-// MARK: Chapter Utilities
-// TODO: dedupe chapter utils across views
-function currentChapterTitle() {
-  let title = null;
-  for (const ch of chapters) {
-    if (ch.index <= current) title = ch.title;
-    else break;
-  }
-  return title;
-}
+initSocket();
 
 function buildNotesList() {
   const list = document.getElementById('pres-notes-list');
@@ -106,36 +63,21 @@ function buildNotesList() {
   if (window.pfRenderQRs) pfRenderQRs(list);
 }
 
-// Make tasklist checkboxes interactive in presenter notes (no persistence).
-function _makeTasklistsInteractivePres(root) {
-  if (!root) root = document;
-  root.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    try { cb.disabled = false; } catch (e) {}
-    const li = cb.closest('li');
-    if (li) li.classList.toggle('task-checked', cb.checked);
-    cb.addEventListener('change', (e) => {
-      const li = e.target.closest('li');
-      if (li) li.classList.toggle('task-checked', e.target.checked);
-    });
-    if (li) {
-      li.addEventListener('click', (ev) => {
-        if (ev.target === cb) return;
-        cb.checked = !cb.checked;
-        cb.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-    }
-  });
-}
+// movedSlide=false means only the step changed - the presenter view always
+// shows slides fully built regardless of step, so skip rebuilding slide
+// content (which would otherwise reload embedded iframes/videos for nothing).
+function render(movedSlide = true) {
+  if (movedSlide) {
+    const slide = slides[current];
+    const next = slides[current + 1];
+    document.getElementById('pres-current-slide').innerHTML = slide.html;
+    document.getElementById('pres-next-slide').innerHTML = next ? next.html : '<div class="end-marker">End of deck</div>';
+    document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+    if (window.pfRenderQRs) pfRenderQRs(document.getElementById('pres-current-slide'));
+    if (window.pfRenderQRs) pfRenderQRs(document.getElementById('pres-next-slide'));
+  }
 
-function render() {
-  const slide = slides[current];
-  const next = slides[current + 1];
-  document.getElementById('pres-current-slide').innerHTML = slide.html;
-  document.getElementById('pres-next-slide').innerHTML = next ? next.html : '<div class="end-marker">End of deck</div>';
   document.getElementById('pres-counter').textContent = (current + 1) + ' / ' + slides.length;
-  document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
-  if (window.pfRenderQRs) pfRenderQRs(document.getElementById('pres-current-slide'));
-  if (window.pfRenderQRs) pfRenderQRs(document.getElementById('pres-next-slide'));
 
   // Chapter indicator
   const chapterEl = document.getElementById('pres-chapter');
@@ -228,6 +170,6 @@ document.addEventListener('keydown', (e) => {
 buildNotesList();
 render();
 document.getElementById('pres-chapter').addEventListener('click', openChapterOverlay);
-_makeTasklistsInteractivePres(document.getElementById('pres-notes-list'));
+_makeTasklistsInteractive(document.getElementById('pres-notes-list'));
 </script>
 </body></html>

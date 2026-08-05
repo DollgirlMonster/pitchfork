@@ -4,6 +4,7 @@
 </div>
 <div id="notes-panel">
   <div id="chapter-indicator"></div>
+  <div id="step-indicator"></div>
   <div id="notes-list"></div>
 </div>
 
@@ -16,33 +17,24 @@
   </div>
 </div>
 
+<!-- MARK: Slide Overview -->
+<div id="overview-overlay">
+  <div id="overview-inner">
+    <div id="overview-title">Slide Overview</div>
+    <div id="overview-grid"></div>
+    <div id="overview-hint">click a slide to jump &middot; g or esc to close</div>
+  </div>
+</div>
+
 <script>
 const slides = __SLIDES_JSON__;
 const chapters = __CHAPTERS_JSON__;
 let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
+// Reveal step within the current slide, kept in step with the slides view so
+// a build can be driven from here.
+let step = 0;
 
-const ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
-ws.onmessage = (e) => {
-  const msg = JSON.parse(e.data);
-  if (msg.type === 'navigate') { current = msg.index; render(); }
-  if (msg.type === 'reload') { location.hash = '#' + current; location.reload(); }
-};
-
-function navigate(idx) {
-  current = Math.max(0, Math.min(slides.length - 1, idx));
-  render();
-  ws.send(JSON.stringify({ type: 'navigate', index: current }));
-}
-
-// MARK: Chapter Utilities
-function currentChapterTitle() {
-  let title = null;
-  for (const ch of chapters) {
-    if (ch.index <= current) title = ch.title;
-    else break;
-  }
-  return title;
-}
+initSocket();
 
 function buildStrip() {
   const strip = document.getElementById('strip');
@@ -77,27 +69,6 @@ function buildNotesList() {
   if (window.pfRenderQRs) pfRenderQRs(list);
 }
 
-// Make tasklist checkboxes interactive in notes
-function _makeTasklistsInteractive(root) {
-  if (!root) root = document;
-  root.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    try { cb.disabled = false; } catch (e) {}
-    const li = cb.closest('li');
-    if (li) li.classList.toggle('task-checked', cb.checked);
-    cb.addEventListener('change', (e) => {
-      const li = e.target.closest('li');
-      if (li) li.classList.toggle('task-checked', e.target.checked);
-    });
-    if (li) {
-      li.addEventListener('click', (ev) => {
-        if (ev.target === cb) return;
-        cb.checked = !cb.checked;
-        cb.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-    }
-  });
-}
-
 function render() {
   document.querySelectorAll('.thumb').forEach(t => {
     t.classList.toggle('active', parseInt(t.dataset.index) === current);
@@ -120,6 +91,18 @@ function render() {
     indicator.style.display = '';
   } else {
     indicator.style.display = 'none';
+  }
+
+  // MARK: Step indicator
+  // Only shown on slides that actually build, so it stays out of the way.
+  const stepIndicator = document.getElementById('step-indicator');
+  const total = maxStep(current);
+  if (total > 0) {
+    stepIndicator.textContent = 'step ' + step + '/' + total;
+    stepIndicator.classList.toggle('complete', step === total);
+    stepIndicator.style.display = '';
+  } else {
+    stepIndicator.style.display = 'none';
   }
 }
 
@@ -158,7 +141,54 @@ overlay.addEventListener('click', (e) => {
   if (e.target === overlay) closeChapterOverlay();
 });
 
+// MARK: Slide Overview
+// Built fresh each time it opens: it renders every slide, which is wasted work
+// on a long deck if you never press g.
+const overviewOverlay = document.getElementById('overview-overlay');
+
+function openOverview() {
+  const grid = document.getElementById('overview-grid');
+  grid.innerHTML = '';
+
+  slides.forEach((slide, i) => {
+    const chapter = chapters.find(ch => ch.index === i);
+    if (chapter) {
+      const heading = document.createElement('div');
+      heading.className = 'overview-chapter';
+      heading.textContent = '§ ' + chapter.title;
+      grid.appendChild(heading);
+    }
+
+    const cell = document.createElement('div');
+    cell.className = 'overview-cell' + (i === current ? ' active' : '');
+    cell.innerHTML =
+      '<div class="overview-thumb"><div class="overview-thumb-inner">' + slide.html +
+      '</div></div><span class="overview-num">' + (i + 1) + '</span>';
+    cell.addEventListener('click', () => { closeOverview(); navigate(i); });
+    grid.appendChild(cell);
+  });
+
+  if (window.pfRenderQRs) pfRenderQRs(grid);
+  overviewOverlay.classList.add('open');
+
+  const active = grid.querySelector('.overview-cell.active');
+  if (active) active.scrollIntoView({ block: 'center' });
+}
+
+function closeOverview() {
+  overviewOverlay.classList.remove('open');
+  document.getElementById('overview-grid').innerHTML = '';
+}
+
+overviewOverlay.addEventListener('click', (e) => {
+  if (e.target === overviewOverlay) closeOverview();
+});
+
 document.addEventListener('keydown', (e) => {
+  if (overviewOverlay.classList.contains('open')) {
+    if (e.key === 'Escape' || e.key === 'g') closeOverview();
+    return; // swallow other keys while the overview is open
+  }
   if (overlay.classList.contains('open')) {
     if (e.key === 'Escape' || e.key === 'c') { closeChapterOverlay(); return; }
     const n = parseInt(e.key);
@@ -170,8 +200,16 @@ document.addEventListener('keydown', (e) => {
     return; // swallow other keys while overlay is open
   }
   if (e.key === 'c') { openChapterOverlay(); return; }
-  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'j' || e.key === ' ') navigate(current + 1);
-  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp'   || e.key === 'k') navigate(current - 1);
+  if (e.key === 'g') { openOverview(); return; }
+  if (e.key === 't') {
+    // Named so pressing t again (here or in the slides view) focuses the
+    // timer you already have open instead of spawning another.
+    const win = window.open('/timer', 'Timer', 'width=300,height=240');
+    if (win) win.focus();
+    return;
+  }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'j' || e.key === ' ') advance();
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp'   || e.key === 'k') retreat();
 });
 
 buildStrip();
