@@ -61,7 +61,8 @@ def _build_slide_html(slide_html: str, css: str, head_tags: str,
 
 def export_deck(deck_path: Path, html: bool = False) -> None:
     from pitchfork.parser import parse_deck
-    from pitchfork.renderer import render_slide_html, init_layouts
+    from pitchfork.layout_loader import DEFAULT_LAYOUT_NAME
+    from pitchfork.renderer import render_slide_html, init_deck, init_layouts
 
     if not deck_path.exists():
         print(f"  File not found: `{deck_path}`")
@@ -71,7 +72,7 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
     ex_cfg = config.get("export", {})
     dk_cfg = config.get("deck", {})
 
-    default_layout = dk_cfg.get("default_layout", "body")
+    default_layout = dk_cfg.get("default_layout", DEFAULT_LAYOUT_NAME)
     resolution     = ex_cfg.get("resolution", "1080x720")
     dpi            = float(ex_cfg.get("dpi", 96.0))
 
@@ -83,6 +84,7 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
     source = deck_path.read_text(encoding="utf-8")
     init_layouts(deck_path, cwd=Path.cwd(), default_layout=default_layout)
     slides = parse_deck(source)
+    init_deck(slides, deck_path, config)
     total  = len(slides)
 
     pkg_dir  = Path(__file__).resolve().parent
@@ -114,6 +116,13 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
 
     # ── HTML export ──────────────────────────────────────────────────────────
     if html:
+        # Pull in vendor assets (highlight.js, qrcodejs, Google Fonts) and inline them as data URIs
+        from pitchfork.vendor import vendor_assets
+
+        head_tags, full_css, added = vendor_assets(head_tags, full_css)
+        if added > 0:
+            print(f"  Embedded fonts, syntax highlighting, and QR rendering support (+{added // 1024} KB).")
+
         parts = [f'<div class="export-slide">{render_slide_html(s)}</div>' for s in slides]
         slides_html = _embed_local_images("\n".join(parts), deck_path.parent)
 
