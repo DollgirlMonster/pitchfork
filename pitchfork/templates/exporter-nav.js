@@ -7,6 +7,7 @@
     slides.forEach((s, n) => s.classList.toggle('active', n === idx));
     if (counter) counter.textContent = `${idx + 1} / ${slides.length}`;
     window.scrollTo(0, 0);
+    if (window.pfRenderQRs) window.pfRenderQRs(slides[idx]);
   };
   document.addEventListener('keydown', e => {
     if (e.target.matches('input,textarea')) return;
