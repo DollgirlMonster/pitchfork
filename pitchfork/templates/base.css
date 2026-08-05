@@ -1,6 +1,7 @@
 /* PITCHFORK base styles
    Reset, CSS variables, and shared element defaults.
  */
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap');
 
 /* Reset */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,3 +69,38 @@ pre {
   overflow: auto;
   font-size: 0.6em;
 }
+
+/* MARK: QR codes */
+.pf-qr {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  max-height: 100%;
+  border: 0.5rem solid #fff;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pf-qr canvas, .pf-qr img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* MARK: /timer controls */
+#timer-controls { display: flex; gap: 0.5rem; }
+
+#timer-controls button {
+  padding: 0.35em 0.9em;
+  border: 1px solid var(--pf-border);
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: var(--pf-font-body);
+  transition: background 0.1s;
+}
+#timer-controls button:hover { background: var(--pf-accent); color: white; border-color: var(--pf-accent); }
