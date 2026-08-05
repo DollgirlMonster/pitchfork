@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from pitchfork.cli import find_deck
+from pitchfork.cli import choose_deck
 
 
 class TestFindDeckOrdering(unittest.TestCase):
@@ -27,7 +27,7 @@ class TestFindDeckOrdering(unittest.TestCase):
         with mock.patch("builtins.input", return_value="1"):
             out = io.StringIO()
             with mock.patch("sys.stdout", out):
-                selected = find_deck(self.tmpdir_path)
+                selected = choose_deck(self.tmpdir_path)
 
         self.assertEqual(selected.name, "Introduction.md")
         self.assertIn("1. Introduction.md", out.getvalue())
