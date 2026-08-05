@@ -155,18 +155,22 @@ def _natural_sort_key(s: str):
 
 
 def find_deck(cwd: Path) -> Optional[Path]:
-    """Find a .md file in a Pitchfork project dir."""
+    """Find .md files in Pitchfork project dir and subfolders"""
     sidecar = cwd / ".pitchfork"
     if not sidecar.exists():
         return None
-    mds = list(cwd.glob("*.md"))
-    mds.sort(key=lambda p: _natural_sort_key(p.name))
+    # Skip hidden dirs and _layouts
+    mds = [
+        p for p in cwd.rglob("*.md")
+        if not any(part.startswith(".") or part == "_layouts" for part in p.relative_to(cwd).parts[:-1])
+    ]
+    mds.sort(key=lambda p: _natural_sort_key(str(p.relative_to(cwd))))
     if len(mds) == 1:
         return mds[0]
     if len(mds) > 1:
         print("Multiple .md files found:")
         for i, p in enumerate(mds):
-            print(f"  {i+1}. {p.name}")
+            print(f"  {i+1}. {p.relative_to(cwd)}")
         choice = input("Pick one (number): ").strip()
         try:
             return mds[int(choice) - 1]
