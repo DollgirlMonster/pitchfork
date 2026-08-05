@@ -54,6 +54,47 @@ class TestExporter(unittest.TestCase):
         self.assertIn("scaleH", _MEASURE_SCALE_JS)
         self.assertIn("Math.max(fit, 0.1)", _MEASURE_SCALE_JS)
 
+    def test_html_export_rerenders_qrs_on_slide_change(self):
+        """Slides are display:none until active, so QR placeholders on any slide
+        but the first have no size when pfRenderQRs first runs. The nav script
+        must re-run it per slide or those QRs never appear."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            deck = tmpdir / "deck.md"
+            deck.write_text("# One\n\n---\n\n## Two\n\n[QR](https://example.com)\n")
+            export_deck(deck, html=True)
+            content = deck.with_suffix(".html").read_text(encoding="utf-8")
+            self.assertIn("pfRenderQRs(slides[idx])", content)
+            self.assertIn('class="pf-qr"', content)
+
+    def test_html_export_has_no_remote_asset_references(self):
+        """--html claims self-contained; assert html export doesn't make requests.
+
+        Skipped when the vendor cache is cold and there's no network, since the
+        fallback is deliberately to keep the original URLs.
+        """
+        from pitchfork import vendor
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            deck = tmpdir / "deck.md"
+            deck.write_text("# Slide\n\n```js\nconst a = 1;\n```\n")
+            vendor.reset_offline_flag()
+            export_deck(deck, html=True)
+            content = deck.with_suffix(".html").read_text(encoding="utf-8")
+
+            # look for highlight.js link because it would be there if vendoring failed
+            if "cdnjs.cloudflare.com/ajax/libs/highlight.js" in content:
+                self.skipTest("no network and cold vendor cache. connect to the net!")
+
+            # look for other known remote refs and expected vendored content
+            for host in ("fonts.googleapis.com", "fonts.gstatic.com"):
+                self.assertNotIn(
+                    f'href="https://{host}', content, f"{host} stylesheet still linked"
+                )
+            self.assertNotIn('<script src="https://', content)
+            self.assertIn("data:font/woff2;base64,", content)
+
     def test_export_css_wraps_pre_blocks(self):
         from pitchfork.exporter import export_deck
         from pathlib import Path
