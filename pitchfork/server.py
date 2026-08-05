@@ -18,20 +18,32 @@ from pitchfork.layout_loader import DEFAULT_LAYOUT_NAME
 
 logger = logging.getLogger(__name__)
 
-# Everything the server knows how to hand back. The watcher reads this too, so
-# that "files worth reloading for" and "files we can serve" stay the same set.
+# Everything the server knows how to hand back. 
 MIME_TYPES = {
-    ".html": "text/html", ".htm": "text/html",
-    ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-    ".png": "image/png", ".gif": "image/gif",
-    ".webp": "image/webp", ".svg": "image/svg+xml",
-    ".tif": "image/tiff", ".tiff": "image/tiff",
-    ".mp4": "video/mp4", ".webm": "video/webm",
-    ".mp3": "audio/mpeg", ".wav": "audio/wav",
-    ".ogg": "audio/ogg", ".flac": "audio/flac",
+    ".html": "text/html", 
+    ".htm": "text/html",
+    ".jpg": "image/jpeg", 
+    ".jpeg": "image/jpeg",
+    ".png": "image/png", 
+    ".gif": "image/gif",
+    ".webp": "image/webp", 
+    ".svg": "image/svg+xml",
+    ".tif": "image/tiff", 
+    ".tiff": "image/tiff",
+    ".mp4": "video/mp4", 
+    ".webm": "video/webm",
+    ".mp3": "audio/mpeg", 
+    ".wav": "audio/wav",
+    ".ogg": "audio/ogg", 
+    ".flac": "audio/flac",
     ".aac": "audio/aac",
     ".pdf": "application/pdf",
-    ".js": "text/javascript", ".woff2": "font/woff2",
+    ".js": "text/javascript", 
+    ".css": "text/css",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".otf": "font/otf",
+    ".eot": "application/vnd.ms-fontobject",
 }
 
 
