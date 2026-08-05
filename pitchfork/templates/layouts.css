@@ -159,3 +159,26 @@
 
 /* MARK: blank */
 .slide-layout.blank { padding: 0; }
+
+/* MARK: agenda */
+/* Built from chapters. Each item carries state as class, so you can restyle
+   .is-done / .is-current / .is-upcoming / .agenda-empty in your styles.css */
+.slide-layout.agenda {
+  & .pf-agenda {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+  }
+  & .pf-agenda-item {
+    transition: opacity 0.2s ease;
+  }
+  & .pf-agenda-item.is-done {
+    opacity: 0.35;
+  }
+  & .pf-agenda-item.is-current {
+    color: var(--pf-accent);
+  }
+}
