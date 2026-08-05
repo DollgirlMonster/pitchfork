@@ -8,6 +8,8 @@ _COMMENT_RE = re.compile(r'<!--.*?-->', re.DOTALL)
 
 
 def match(slide) -> bool:
+    if slide.zones:
+        return False
     content = _COMMENT_RE.sub('', slide.content)
     lines = [l for l in content.strip().splitlines() if l.strip()]
     heading_lines = [l for l in lines if l.startswith("#")]

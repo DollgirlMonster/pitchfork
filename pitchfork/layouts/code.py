@@ -7,6 +7,8 @@ inside fenced code blocks.
 
 
 def match(slide) -> bool:
+    if slide.zones:
+        return False
     stripped = slide.content.strip()
     lines = stripped.splitlines()
     total = len(lines)
