@@ -140,6 +140,7 @@ class PitchforkServer:
             ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
             ".png": "image/png", ".gif": "image/gif",
             ".webp": "image/webp", ".svg": "image/svg+xml",
+            ".tif": "image/tiff", ".tiff": "image/tiff",
             ".mp4": "video/mp4", ".webm": "video/webm",
             ".mp3": "audio/mpeg", ".wav": "audio/wav",
             ".ogg": "audio/ogg", ".flac": "audio/flac",
