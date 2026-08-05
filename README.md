@@ -38,7 +38,8 @@ pitchfork serve         # opens slides in the browser, live-reloads on updates
 
 | Feature | Syntax / Usage |
 |---|---|
-| **Slide breaks** | `---` on its own line
+| **Slide breaks** | `---` on its own line |
+| **Reveal step** | `--` on its own line |
 | **Notes delimiter** | `%%%` on its own line — everything until the next `---` is notes |
 | **Explicit layout override** | `::layout:<layout-name>::` as the first line of a slide. More info about Layouts in the Layouts section below. |
 | **Chapter marker** | `<!-- MARK: Chapter Title -->` tags the slide as a chapter start (and highlights it in the VSCode sidebar!) |
@@ -62,6 +63,15 @@ Speaker notes go here — full markdown supported.
 - [ ] Checkboxes work too, for step-by-step notes!
 
 ---
+
+::layout:agenda::
+## Today's Agenda
+
+%%%
+- The `agenda` layout automatically builds a list from the deck's chapters. Anything you write on the slide renders above the list.
+
+---
+
 <!-- MARK: Chapter Title 
 -->
 ## Here's Another Slide
@@ -136,6 +146,32 @@ I recommend putting the closing `-->` on its own line, because as of this writin
 
 A `§ Chapter Title` indicator appears in all views to help you and your audience keep track of where you are and what's next. Press `c` in `notes` or `presenter` view to open the chapter jump menu, where you can jump directly to any chapter.
 
+## Reveal Steps
+
+`--` splits a slide into steps. Everything above the first `--` shows immediately; each keypress reveals the next chunk before moving on to the next slide.
+
+```markdown
+## The Persuasive Formula
+
+- Verb
+--
+- Benefit
+--
+- Urgent time or place
+```
+
+Steps work inside zones too:
+
+```markdown
+::left::
+Before: 26%
+--
+After: 92%
+
+::right::
+![diagram](img/process.png)
+```
+
 ## Layouts
 ### Built-In Layouts
 
@@ -148,13 +184,35 @@ A `§ Chapter Title` indicator appears in all views to help you and your audienc
 | An image, then text | `image-left` |
 | Text, then an image | `image-right` |
 | Everything else | `body` (or `default_layout` from `.pitchfork`) |
+| `::layout:agenda::` | builds a list from the Deck's Chapters, see below |
 
+#### Agenda Layout
+
+`::layout:agenda::` builds a list from your `<!-- MARK: -->` chapters. Anything you write on the slide renders above the list:
+
+Drop the same slide in again between sections and it re-renders showing where
+you are. Each item includes stylable classes:
+
+```css
+.pf-agenda-item.is-done      { opacity: 0.35 }        /* already covered */
+.pf-agenda-item.is-current   { color: var(--pf-accent) }
+.pf-agenda-item.is-upcoming  { }                      /* still to come */
+```
 
 ### Custom Layouts
 
 Drop a `layoutname.py` file into the `_layouts/` folder in your working directory to define a custom layout. 
 
-Custom layouts take priority over built-in ones. They must include the `match()` and `html()`  functions in order to work:
+Layouts are found in this order, and the first one to claim a slide wins:
+
+| | Where | For |
+|---|---|---|
+| 1 | `_layouts/` in your working directory | all decks in this project |
+| 2 | `_layouts/` next to a deck file in a subfolder | one specific deck |
+| 3 | `~/.config/pitchfork/_layouts/` | every project on your computer |
+| 4 | Built-in | everyone |
+
+Custom layouts must include the `match()` and `html()` functions in order to work:
 
 > `match()` describes logic for when to apply the layout
 
@@ -184,6 +242,60 @@ def html(slide, md) -> str:
         ">{content}</div>
     """.format(content=md(slide.content))
 ```
+
+#### Layouts that need the whole deck
+
+`html()`'s `deck` parameter gives optional deck-wide context to your Layout.
+
+```python
+def html(slide, md, deck) -> str:
+    ...
+```
+
+| | |
+|---|---|
+| `deck.slides` | every parsed slide |
+| `deck.chapters` | `<!-- MARK: -->` chapters, each with `.index` and `.title` |
+| `deck.config` | the `.pitchfork` sidecar, parsed |
+| `deck.path` | the deck file's path |
+
+This is how the built-in `agenda` layout knows your chapters. It's also handy for creating
+layouts that need more info than just one slide, such as rendering the next slides for a transition animation, or creating a title layout that reads the course name out of your sidecar:
+
+```toml
+# .pitchfork
+...
+
+[vars]
+course = "UI/UX"
+```
+
+```python
+# _layouts/title.py
+""" A smart title layout that reads the course name from the project sidecar and the session number from the deck filename. """
+
+import re
+def match(slide) -> bool:
+    # override default title layout
+    if slide.zones:
+        return False
+    content = re.compile(r'<!--.*?-->', re.DOTALL).sub('', slide.content)
+    lines = [l for l in content.strip().splitlines() if l.strip()]
+    heading_lines = [l for l in lines if l.startswith("#")]
+    body_lines = [l for l in lines if not l.startswith("#")]
+    return bool(heading_lines and not body_lines and len(heading_lines) <= 2)
+
+def html(slide, md, deck) -> str:
+    course = deck.config.get("vars", {}).get("course", "")
+    session = re.search(r"\d+", deck.path.stem)
+    return (
+        '<div class="slide-layout title">'
+        f'<p class="session">Session {session.group() if session else ""}</p>'
+        f'<h1>{course}</h1>{md(slide.content)}'
+        '</div>'
+    )
+```
+
 ## Little Extras
 ### `.pitchfork` Sidecar
 
