@@ -3,8 +3,14 @@ Parser for Pitchfork .md deck files.
 """
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+
+@dataclass
+class Chapter:
+    index: int   # index of the slide that opens the chapter
+    title: str
 
 @dataclass
 class Slide:
@@ -14,6 +20,50 @@ class Slide:
     notes: str
     zones: Dict[str, str] = field(default_factory=dict)
     chapter: Optional[str] = None
+    steps: int = 0   # reveal steps beyond the base slide; 0 means no build
+
+@dataclass
+class Deck:
+    """Whole-deck context for layouts that want to adapt based on other slides
+    Data only, not HTML. No infinite recusion pls
+    """
+    path: Optional[Path]
+    slides: List[Slide] = field(default_factory=list)
+    chapters: List[Chapter] = field(default_factory=list)
+    config: Dict = field(default_factory=dict)
+
+
+# `--` splits a slide into reveal steps
+STEP_SENTINEL = "<!--pf-step-->"
+_STEP_BREAK_RE = re.compile(r"^[ \t]*--[ \t]*$", re.MULTILINE)
+_FENCE_RE = re.compile(r"^(?P<fence>```|~~~).*?^(?P=fence)", re.MULTILINE | re.DOTALL)
+
+
+def mark_steps(body: str) -> Tuple[str, int]:
+    """Replace bare `--` lines with step sentinels. Returns (body, step count).
+
+    `--` inside a fenced code block is left alone
+    `-->` is safe because of the regex
+    """
+    masked = _FENCE_RE.sub(
+        lambda m: "".join("\n" if c == "\n" else " " for c in m.group(0)), body
+    )
+    spans = [m.span() for m in _STEP_BREAK_RE.finditer(masked)]
+    if not spans:
+        return body, 0
+
+    out, last = [], 0
+    for start, end in spans:
+        out.append(body[last:start])
+        out.append(STEP_SENTINEL)
+        last = end
+    out.append(body[last:])
+    return "".join(out), len(spans)
+
+
+def chapters_of(slides: List[Slide]) -> List[Chapter]:
+    """Chapters in deck order, one per slide that opens a new chapter."""
+    return [Chapter(index=s.index, title=s.chapter) for s in slides if s.chapter is not None]
 
 
 def parse_zones(content: str) -> Tuple[str, Dict[str, str]]:
@@ -83,6 +133,10 @@ def parse_deck(source: str) -> List[Slide]:
         slide_body = parts[0].strip()
         notes = parts[1].strip() if len(parts) > 1 else ""
 
+        # Reveal steps. Done before zone parsing so a build can live inside
+        # ::left:: or any other zone.
+        slide_body, step_count = mark_steps(slide_body)
+
         # Layout: explicit ::layout:name:: marker, or None (resolved at render time)
         layout = None
         layout_marker = re.match(r"^::layout:([^\s:]+)::\s*$", slide_body, re.MULTILINE)
@@ -100,6 +154,7 @@ def parse_deck(source: str) -> List[Slide]:
             notes=notes,
             zones=zones,
             chapter=mark_for_chunk.get(i),
+            steps=step_count,
         ))
 
     return slides

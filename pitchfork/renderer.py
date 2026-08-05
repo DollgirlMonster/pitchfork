@@ -8,24 +8,41 @@ from typing import Dict, List, Optional
 import re
 import html
 import markdown
-from pitchfork.layout_loader import Layout, load_layouts, resolve_layout
-from pitchfork.parser import Slide
+from pitchfork.layout_loader import DEFAULT_LAYOUT_NAME, Layout, load_layouts, resolve_layout
+from pitchfork.parser import Deck, Slide, chapters_of
 
 # Module-level layout list — populated by init_layouts() at startup.
 _layouts: List[Layout] = []
-# Name of the fallback layout when no match() claims a slide. Mirrors .pitchfork default_layout.
-_default_layout_name: str = "body"
-# Last-resort HTML when resolve_layout() can't even find the default_layout
-# name (e.g. the built-in body.py itself failed to load). A bare string, not
-# a Layout — there is nothing left to drift out of sync with.
-_FALLBACK_HTML = '<div class="slide-layout body">{content}</div>'
+
+# Whole-deck context, passed to layouts whose html() takes a third argument.
+_deck: Optional[Deck] = None
+
+# Name of the fallback layout when no match() claims a slide. Defaults to the const but is overwritten by user config
+_default_layout_name: str = DEFAULT_LAYOUT_NAME
 
 
-def init_layouts(deck_path: Path, cwd: Optional[Path] = None, default_layout: str = "body") -> None:
+def init_layouts(deck_path: Path, cwd: Optional[Path] = None, default_layout: str = DEFAULT_LAYOUT_NAME) -> None:
     """Load (or reload) layouts for the given deck. Call at startup and on file-change."""
     global _layouts, _default_layout_name
     _layouts = load_layouts(deck_path, cwd=cwd)
     _default_layout_name = default_layout
+
+
+def init_deck(slides: List[Slide], deck_path: Optional[Path] = None,
+              config: Optional[Dict] = None) -> Deck:
+    """Rebuild the whole-deck context. Call after each parse, before rendering.
+
+    Layouts whose html() takes a third argument receive this; everything else
+    never sees it.
+    """
+    global _deck
+    _deck = Deck(
+        path=deck_path,
+        slides=slides,
+        chapters=chapters_of(slides),
+        config=config or {},
+    )
+    return _deck
 
 
 def md(text: str) -> str:
@@ -89,9 +106,12 @@ def render_slide_html(slide: Slide) -> str:
     if layout is None:
         # Catastrophic: not even the default_layout name loaded.
         # Raw markdown beats a crash during a live presentation.
-        return _FALLBACK_HTML.format(content=md(slide.content))
+        # Raise a warning in the console to let the user know during edit
+        print(f"!!Layout error: no layout found for slide {slide.index} (default_layout={_default_layout_name})")
+        return f'<div class="slide-layout body">{md(slide.content)}</div>'
     try:
-        html_out = layout.html(slide, md)
+        # Layouts can request the full deck contents by declaring a `deck` param
+        html_out = layout.html(slide, md, _deck) if layout.wants_deck else layout.html(slide, md)
         return replace_qr_placeholders(html_out)
     except Exception as exc:
         return (
@@ -116,6 +136,7 @@ def slides_to_json_payload(slides: List[Slide]) -> List[Dict]:
             "html": render_slide_html(s),
             "notes": render_notes_html(s),
             "chapter": s.chapter,
+            "steps": s.steps,
         }
         for s in slides
     ]
@@ -124,7 +145,6 @@ def slides_to_json_payload(slides: List[Slide]) -> List[Dict]:
 def chapters_json_payload(slides: List[Slide]) -> List[Dict]:
     """Return a compact [{index, title}] list for slides that open a new chapter."""
     return [
-        {"index": s.index, "title": s.chapter}
-        for s in slides
-        if s.chapter is not None
+        {"index": c.index, "title": c.title}
+        for c in chapters_of(slides)
     ]
