@@ -230,17 +230,25 @@ def _pick_index(labels: list) -> int:
     return idx
 
 
-def find_deck(cwd: Path) -> Optional[Path]:
-    """Find .md files in Pitchfork project dir and subfolders"""
+def find_decks(cwd: Path) -> list:
+    """Find and order .md files in Pitchfork project dir and subfolders"""
     sidecar = cwd / ".pitchfork"
     if not sidecar.exists():
-        return None
+        return []
     # Skip hidden dirs and _layouts
     mds = [
         p for p in cwd.rglob("*.md")
         if not any(part.startswith(".") or part == "_layouts" for part in p.relative_to(cwd).parts[:-1])
     ]
     mds.sort(key=lambda p: _natural_sort_key(str(p.relative_to(cwd))))
+    return mds
+
+
+def choose_deck(cwd: Path) -> Optional[Path]:
+    """Choose from available decks"""
+    mds = find_decks(cwd)
+    if not mds:
+        return None
     if len(mds) == 1:
         return mds[0]
     if len(mds) > 1:
@@ -343,6 +351,7 @@ def cmd_new(args):
 
 def cmd_serve(args):
     from pitchfork.parser import parse_deck
+    from pitchfork.layout_loader import DEFAULT_LAYOUT_NAME
     from pitchfork.renderer import slides_to_json_payload, chapters_json_payload
     from pitchfork.server import PitchforkServer
     from pitchfork.watcher import start_watcher
@@ -352,9 +361,9 @@ def cmd_serve(args):
     if args.file:
         deck_path = Path(args.file)
     else:
-        deck_path = find_deck(cwd)
+        deck_path = choose_deck(cwd)
         if not deck_path:
-            print("  No .pitchfork sidecar found. Run `pitchfork init` first, or specify a file.")
+            print("!!No .pitchfork sidecar found. Run `pitchfork init` first, or specify a file.")
             sys.exit(1)
 
     if not deck_path.exists():
@@ -363,14 +372,15 @@ def cmd_serve(args):
 
     css_path = cwd / "styles.css"
     config = load_config(deck_path)
-    default_layout = config.get("deck", {}).get("default_layout", "body")
+    default_layout = config.get("deck", {}).get("default_layout", DEFAULT_LAYOUT_NAME)
     port = args.port    # TODO: handle port in use; just go up 2 at a time until we find a free one
 
     # Initial parse
-    from pitchfork.renderer import init_layouts
+    from pitchfork.renderer import init_deck, init_layouts
     init_layouts(deck_path, cwd=cwd, default_layout=default_layout)
     source = deck_path.read_text(encoding="utf-8")
     slides = parse_deck(source)
+    init_deck(slides, deck_path, config)
     slides_json = json.dumps(slides_to_json_payload(slides))
     chapters_json = json.dumps(chapters_json_payload(slides))
 
@@ -381,6 +391,7 @@ def cmd_serve(args):
 
     server = PitchforkServer(deck_path, css_path, host="localhost", port=port, cwd=cwd)
     server.default_layout = default_layout
+    server.config = config
     server.set_slides_json(slides_json)
     server.set_chapters_json(chapters_json)
     server.set_soundboard_json(soundboard_json)
