@@ -365,6 +365,7 @@ def cmd_serve(args):
     resolution = config.get("export", {}).get("resolution", "1080x720")
     stage_w, stage_h = parse_resolution(resolution)
     port = args.port    # TODO: handle port in use; just go up 2 at a time until we find a free one
+    host = "0.0.0.0" if args.lan else "127.0.0.1"
 
     # Initial parse
     from pitchfork.renderer import init_deck, init_layouts
@@ -380,7 +381,7 @@ def cmd_serve(args):
     soundboard = {str(k): v for k, v in raw_soundboard.items() if str(k).isdigit() and 1 <= int(str(k)) <= 9}
     soundboard_json = json.dumps(soundboard)
 
-    server = PitchforkServer(deck_path, css_path, host="localhost", port=port, cwd=cwd)
+    server = PitchforkServer(deck_path, css_path, host=host, port=port, cwd=cwd)
     server.default_layout = default_layout
     server.config = config
     server.stage_w = stage_w
@@ -430,6 +431,8 @@ def main():
     p_serve = sub.add_parser("serve", help="Serve a deck with live reload")
     p_serve.add_argument("file", nargs="?", help="Deck .md file (auto-detected if omitted)")
     p_serve.add_argument("--port", type=int, default=3000, help="HTTP port (default: 3000)")
+    p_serve.add_argument("--no-lan", action="store_false", dest="lan", default=True,
+                          help="Disable LAN access; only reachable from this device (default: true)")
     p_serve.add_argument("--no-open", action="store_true", help="Don't open browser automatically")
 
     # export
