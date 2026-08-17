@@ -51,10 +51,12 @@
   inset: 0;
   transform-origin: top left;
 
-  /* Scale up slide content to fill thumbnail */
-  transform: scale(0.5);
-  width: 200%;
-  height: 200%;
+  /* Slide content now renders at a fixed logical size (--pf-stage-w), not
+     something viewport-relative, so this has to scale against that same
+     reference instead of a hardcoded ratio to stay proportional. */
+  transform: scale(calc(var(--pf-thumb-width) / var(--pf-stage-w)));
+  width: calc(var(--pf-stage-w) / var(--pf-thumb-width) * 100%);
+  height: calc(var(--pf-stage-w) / var(--pf-thumb-width) * 100%);
 
   pointer-events: none;
   overflow: hidden;
@@ -92,23 +94,6 @@
   cursor: pointer;
 }
 
-/* Only appears on slides that build, so it never takes space otherwise. */
-#step-indicator {
-  font-family: var(--pf-font-code);
-  font-size: 0.75rem;
-  color: var(--pf-muted);
-  letter-spacing: 0.06em;
-  padding: 0.4rem 1.5rem;
-  border-bottom: 1px solid var(--pf-border);
-  background: var(--pf-bg);
-  flex-shrink: 0;
-}
-
-/* Everything on this slide is revealed — the next press moves on. */
-#step-indicator.complete {
-  color: var(--pf-accent);
-}
-
 #notes-list {
   flex: 1;
   overflow-y: auto;
@@ -128,6 +113,9 @@
 .notes-entry.dimmed { opacity: 0.3; }
 
 .notes-entry-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   font-size: 0.65rem;
   font-family: var(--pf-font-code);
   text-transform: uppercase;
@@ -137,6 +125,26 @@
 }
 
 .notes-entry.dimmed .notes-entry-label { color: var(--pf-muted); }
+
+/* Build dots: one for the base slide plus one per reveal step */
+.notes-steps {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.step-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  border: 1px solid var(--pf-muted);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.step-dot.filled {
+  background: var(--pf-accent);
+  border-color: var(--pf-accent);
+}
 
 .notes-entry ul, .notes-entry ol { padding-left: 1.5em; }
 .notes-entry li { margin-bottom: 0.35em; }
@@ -320,6 +328,11 @@
   cursor: pointer;
   background: var(--pf-bg);
   transition: border-color 0.15s;
+  /* Lets .overview-thumb-inner below read this cell's actual rendered width
+     via cqw — its own width is a CSS Grid auto-fill track, not a constant
+     like --pf-thumb-width, so it can't use a fixed calc() the way the strip
+     thumbnails do. */
+  container-type: inline-size;
 }
 
 .overview-cell:hover:not(.active) { border-color: var(--pf-muted); }
@@ -336,15 +349,17 @@
   overflow: hidden;
 }
 
-/* Same trick as the strip thumbnails: render the slide at 4x and scale it
-   down, so text stays proportional instead of reflowing at thumbnail size. */
+/* Same trick as the strip thumbnails, but .overview-cell's width is a CSS
+   Grid auto-fill track, not a constant like --pf-thumb-width — so the ratio
+   is computed against the cell's own actual width (via cqw, from
+   container-type on .overview-cell above) instead of a fixed number. */
 .overview-thumb-inner {
   position: absolute;
   inset: 0;
   transform-origin: top left;
-  transform: scale(0.25);
-  width: 400%;
-  height: 400%;
+  transform: scale(calc(100cqw / var(--pf-stage-w)));
+  width: calc(var(--pf-stage-w) / 100cqw * 100%);
+  height: calc(var(--pf-stage-w) / 100cqw * 100%);
   pointer-events: none;
   overflow: hidden;
 }
