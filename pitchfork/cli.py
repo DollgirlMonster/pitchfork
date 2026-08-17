@@ -11,10 +11,7 @@ import webbrowser
 from pathlib import Path
 from typing import Optional
 
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
+from pitchfork.config import load_config
 
 DEFAULT_CSS = """\
 /*  Pitchfork Styles
@@ -270,14 +267,6 @@ def choose_deck(cwd: Path) -> Optional[Path]:
     return None
 
 
-def load_config(deck_path: Path) -> dict:
-    sidecar = deck_path.parent / ".pitchfork"
-    if sidecar.exists():
-        with open(sidecar, "rb") as f:
-            return tomllib.load(f)
-    return {}
-
-
 EXAMPLE_LAYOUT = '''\
 """
 Example custom layout — rename this file and edit match() / html() to taste.
@@ -416,6 +405,11 @@ def cmd_export(args):
     from pitchfork.exporter import export_deck
     export_deck(Path(args.file), html=args.html)
 
+def cmd_doctor(args):
+    from pitchfork import doctor
+    target = Path(args.file) if args.file else None
+    doctor.run(target, Path.cwd())
+
 def main():
     parser = argparse.ArgumentParser(prog="pitchfork", description="Pitchfork is a plain-text slide tool")
     sub = parser.add_subparsers(dest="command")
@@ -439,6 +433,10 @@ def main():
     p_export.add_argument("file", help="Deck .md file")
     p_export.add_argument("--html", action="store_true", help="Export as self-contained HTML")
 
+    # doctor
+    p_doctor = sub.add_parser("doctor", help="Check decks for things that fail quietly")
+    p_doctor.add_argument("file", nargs="?", help="Deck .md file (checks every deck if omitted)")
+
     args = parser.parse_args()
 
     # 𓌹⋆♆⋆𓌺 <- bat face
@@ -459,6 +457,8 @@ If Pitchfork improves your workflow, please consider donating! I can't live with
         cmd_serve(args)
     elif args.command == "export":
         cmd_export(args)
+    elif args.command == "doctor":
+        cmd_doctor(args)
     else:
         parser.print_help()
 
