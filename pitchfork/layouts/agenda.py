@@ -48,6 +48,13 @@ def html(slide, md, deck) -> str:
         else:
             break
 
+    # If the agenda slide itself opens the first chapter (e.g. an "Agenda"
+    # MARK sitting on this same slide), listing that chapter would just
+    # repeat the slide's own heading right below it. Leave it out.
+    if chapters[0].index == slide.index:
+        chapters = chapters[1:]
+        current -= 1
+
     items = []
     for i, chapter in enumerate(chapters):
         state = "done" if i < current else "current" if i == current else "upcoming"
