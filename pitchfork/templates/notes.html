@@ -4,7 +4,6 @@
 </div>
 <div id="notes-panel">
   <div id="chapter-indicator"></div>
-  <div id="step-indicator"></div>
   <div id="notes-list"></div>
 </div>
 
@@ -60,6 +59,19 @@ function buildNotesList() {
     const label = document.createElement('div');
     label.className = 'notes-entry-label';
     label.textContent = 'Slide ' + (i + 1);
+    
+    const total = maxStep(i);
+    if (total > 0) {
+      const steps = document.createElement('span');
+      steps.className = 'notes-steps';
+      for (let s = 0; s <= total; s++) {
+        const dot = document.createElement('span');
+        dot.className = 'step-dot';
+        steps.appendChild(dot);
+      }
+      label.appendChild(steps);
+    }
+
     entry.appendChild(label);
     const body = document.createElement('div');
     body.innerHTML = slide.notes;
@@ -93,17 +105,13 @@ function render() {
     indicator.style.display = 'none';
   }
 
-  // MARK: Step indicator
-  // Only shown on slides that actually build, so it stays out of the way.
-  const stepIndicator = document.getElementById('step-indicator');
-  const total = maxStep(current);
-  if (total > 0) {
-    stepIndicator.textContent = 'step ' + step + '/' + total;
-    stepIndicator.classList.toggle('complete', step === total);
-    stepIndicator.style.display = '';
-  } else {
-    stepIndicator.style.display = 'none';
-  }
+  // MARK: Step dots
+  document.querySelectorAll('.notes-entry').forEach(e => {
+    const isCurrent = parseInt(e.dataset.index) === current;
+    e.querySelectorAll('.step-dot').forEach((dot, s) => {
+      dot.classList.toggle('filled', isCurrent && s <= step);
+    });
+  });
 }
 
 function openChapterOverlay() {
