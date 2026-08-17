@@ -119,6 +119,18 @@ class TestAgendaLayout(unittest.TestCase):
             self.assertIn(title, out)
         self.assertIn("Agenda", out)  # the slide's own content is kept
 
+    def test_agenda_omits_itself_when_it_opens_the_first_chapter(self):
+        """An agenda slide that is itself the first MARK shouldn't list its own title."""
+        source = (
+            "::layout:agenda::\n<!-- MARK: Agenda -->\n## Agenda\n\n---\n\n"
+            "<!-- MARK: SEO -->\n# S\n\n---\n\n<!-- MARK: Hosting -->\n# H\n"
+        )
+        out = self._render(source, 0)
+        self.assertNotIn('data-state', out.split("<ol", 1)[0])  # sanity: list follows preamble
+        self.assertEqual(1, out.count(">Agenda<"))  # heading only, not repeated as a list item
+        self.assertIn("SEO", out)
+        self.assertIn("Hosting", out)
+
     def test_agenda_before_any_chapter_marks_all_upcoming(self):
         source = (
             "::layout:agenda::\n\n---\n\n<!-- MARK: One -->\n# A\n\n---\n\n<!-- MARK: Two -->\n# B\n"
