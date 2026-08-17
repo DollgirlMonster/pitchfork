@@ -1,13 +1,17 @@
 <body class="view-slides">
+<div id="slide-viewport">
 <div id="slide-container">
   <div id="slide-content"></div>
   <canvas id="draw-canvas"></canvas>
   <div id="slide-logo"><img src="/logo.png" alt="" onerror="this.parentElement.style.display='none'"></div>
-  <div id="slide-chapter-strip">
-    <span id="slide-counter-inline"></span>
-    <span id="slide-chapter-current"></span>
-    <span id="slide-chapter-upcoming"></span>
-  </div>
+</div>
+<!-- Outside #slide-container on purpose: spans the real window edge-to-edge 
+rather than being confined to the fixed-size stage like the canvas/logo are -->
+<div id="slide-chapter-strip">
+  <span id="slide-counter-inline"></span>
+  <span id="slide-chapter-current"></span>
+  <span id="slide-chapter-upcoming"></span>
+</div>
 </div>
 
 <script>
@@ -18,6 +22,22 @@ let current = location.hash ? parseInt(location.hash.slice(1)) || 0 : 0;
 // 0 = everything before the first `--`
 // `slides[i].steps` = everything revealed.
 let step = 0;
+
+// MARK: Stage
+// #slide-container is laid out at the fixed logical size STAGE_W x STAGE_H
+// and scaled uniformly here to fit whatever window it's actually shown in. 
+// This keeps slide layout and draw-canvas coordinates identical across devices
+const stageEl = document.getElementById('slide-container');
+stageEl.style.setProperty('--pf-stage-w', STAGE_W + 'px');
+stageEl.style.setProperty('--pf-stage-h', STAGE_H + 'px');
+
+function applyStageScale() {
+  const scale = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+  stageEl.style.transform = `scale(${scale})`;
+}
+
+applyStageScale();
+window.addEventListener('resize', applyStageScale);
 
 initSocket();
 
@@ -79,6 +99,9 @@ function renderChapterStrip() {
 // full rebuild so embedded iframes/videos and the draw canvas aren't reset.
 function render(movedSlide = true) {
   if (!movedSlide) { applyStep(); return; }
+  // Not broadcast: whichever side triggered this navigation already sent a navigate message,
+  // so other instances will receive the same message and clear automatically
+  strokes = [];
   clearCanvas();
   const slide = slides[current];
   const container = document.getElementById('slide-content');
@@ -100,11 +123,10 @@ const cs = getComputedStyle(document.documentElement);
 function drawColor() { return cs.getPropertyValue('--pf-draw-color').trim() || '#ff3b30'; }
 function drawWidth() { return parseFloat(cs.getPropertyValue('--pf-draw-width')) || 4; }
 
-function resizeCanvas() {
-  const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  ctx.putImageData(data, 0, 0);
+// The canvas buffer is fixed to the stage's logical resolution, not the real window
+function initCanvas() {
+  canvas.width = STAGE_W;
+  canvas.height = STAGE_H;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 }
@@ -126,7 +148,11 @@ function bindInteractiveGuard() {
     return el;
   }
 
-  function updateAtPoint(x, y) {
+  function updateAtPoint(x, y, pointerType) {
+    // Only care about clicking links for the mouse
+    if (pointerType !== 'mouse') { canvas.style.pointerEvents = ''; return; }
+    
+    if (drawing) return;
     const el = elementUnderPoint(x, y);
     const hit = el && el.closest && el.closest(SELECTOR);
     if (hit) {
@@ -136,9 +162,9 @@ function bindInteractiveGuard() {
     }
   }
 
-  // Pointer movement (mouse/touch) drives the check
+  // Pointer movement (mouse/touch/pen) drives the check
   document.addEventListener('pointermove', (e) => {
-    updateAtPoint(e.clientX, e.clientY);
+    updateAtPoint(e.clientX, e.clientY, e.pointerType);
   }, { passive: true });
 
   document.addEventListener('touchstart', (e) => {
@@ -149,7 +175,7 @@ function bindInteractiveGuard() {
   // Also check on click/press to ensure canvas stays disabled while
   // interacting with the control until pointer moves away.
   document.addEventListener('pointerdown', (e) => {
-    updateAtPoint(e.clientX, e.clientY);
+    updateAtPoint(e.clientX, e.clientY, e.pointerType);
   }, true);
 
   // Re-bind on DOM changes (new iframes / interactive elements may appear)
@@ -164,43 +190,184 @@ function clearCanvas() {
 }
 
 function getPos(e) {
-  if (e.touches) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  return { x: e.clientX, y: e.clientY };
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * canvas.width / rect.width,
+    y: (e.clientY - rect.top) * canvas.height / rect.height,
+  };
 }
 
-canvas.addEventListener('mousedown', (e) => {
+// ── Retained stroke model ───────────────────────────────────
+// A plain array of {points, color, width}, kept alongside the raster canvas to support undo
+let strokes = [];
+let currentStroke = null;
+
+function strokeToCanvas(stroke) {
+  if (stroke.points.length === 1) {
+    const p = stroke.points[0];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, stroke.width / 2, 0, Math.PI * 2);
+    ctx.fillStyle = stroke.color;
+    ctx.fill();
+    return;
+  }
+  ctx.beginPath();
+  ctx.strokeStyle = stroke.color;
+  ctx.lineWidth = stroke.width;
+  ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+  for (let i = 1; i < stroke.points.length; i++) ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+  ctx.stroke();
+}
+
+function redrawAll() {
+  clearCanvas();
+  strokes.forEach(strokeToCanvas);
+}
+
+function broadcastStroke(stroke) {
+  ws.send(JSON.stringify({ type: 'draw-stroke', stroke }));
+}
+
+// Called when a stroke arrives from another device:
+// pushes it into the local history and paints just that stroke
+// This also implicitly "finalizes" whatever the live-preview
+// below painted for this same stroke, patching over any gaps
+function applyRemoteStroke(stroke) {
+  strokes.push(stroke);
+  strokeToCanvas(stroke);
+  remoteLiveId = null;
+}
+
+// ── Live stroke preview (remote) ────────────────────────────
+// Points a device is *currently* drawing, streamed as they happen so a
+// viewer sees the stroke appear in real time rather than only once it's
+// finished. 
+// Purely visual/transient and never touches `strokes` array: the
+// eventual draw-stroke message above is what actually commits it, so any
+// points this drops are invisible once that arrives.
+let remoteLiveId = null;
+
+function applyRemoteDrawPoint(msg) {
+  if (!msg.points.length) return;
+  let pts = msg.points;
+  if (msg.id !== remoteLiveId) {
+    remoteLiveId = msg.id;
+    ctx.beginPath();
+    ctx.strokeStyle = msg.color;
+    ctx.lineWidth = msg.width;
+    ctx.moveTo(pts[0].x, pts[0].y);
+    pts = pts.slice(1);
+  }
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  if (pts.length) ctx.stroke();
+}
+
+function undo() {
+  if (!strokes.length) return;
+  strokes.pop();
+  redrawAll();
+  ws.send(JSON.stringify({ type: 'undo' }));
+}
+
+function applyRemoteUndo() {
+  strokes.pop();
+  redrawAll();
+}
+
+// Explicit clear (Backspace)
+function manualClear() {
+  strokes = [];
+  clearCanvas();
+  ws.send(JSON.stringify({ type: 'clear' }));
+}
+
+function applyRemoteClear() {
+  strokes = [];
+  clearCanvas();
+}
+
+// ── Live stroke preview (local → remote) ────────────────────
+// Points collected since the last flush, sent at most once per animation
+// frame rather than once per pointermove
+// Purely a live preview; broadcastStroke() below (on pointerup)
+// is what actually commits the stroke, so anything lost or dropped here is fine
+let liveStrokeSeq = 0;
+let pendingPoints = [];
+let flushScheduled = false;
+
+function flushLivePoints() {
+  flushScheduled = false;
+  if (!pendingPoints.length || !currentStroke) return;
+  ws.send(JSON.stringify({
+    type: 'draw-point',
+    id: currentStroke.id,
+    color: currentStroke.color,
+    width: currentStroke.width,
+    points: pendingPoints,
+  }));
+  pendingPoints = [];
+}
+
+// Ugh. ok. (bugs.webkit.org #217430)
+// iPadOS Scribble (handwriting recognition, on by default) operates above
+// the browser: when it recognizes a stroke as handwriting-shaped, it can
+// swallow the underlying pointer events before they ever reach the page.
+// The verified workaround is an explicit touchmove listener that calls preventDefault()
+// touch-action:none in CSS alone isn't enough
+canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+// Pointer Events (not mouse events)
+canvas.addEventListener('pointerdown', (e) => {
+  // Palm rejection
+  if (e.pointerType === 'touch') { e.preventDefault(); return; }
+  // Self-healing: a stroke is still marked "open" (shouldn't normally
+  // happen, see the note above `drawing`'s declaration), so close it out now
+  if (drawing) finishStroke();
   drawing = true;
   hasMoved = false;
   const p = getPos(e);
+  currentStroke = { id: ++liveStrokeSeq, points: [p], color: drawColor(), width: drawWidth() };
+  pendingPoints = [];
   ctx.beginPath();
   ctx.moveTo(p.x, p.y);
-  ctx.strokeStyle = drawColor();
-  ctx.lineWidth = drawWidth();
+  ctx.strokeStyle = currentStroke.color;
+  ctx.lineWidth = currentStroke.width;
+
+  // keep a stroke tracked correctly if the pointer strays outside the canvas mid-drag
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 });
 
-canvas.addEventListener('mousemove', (e) => {
+canvas.addEventListener('pointermove', (e) => {
   if (!drawing) return;
   hasMoved = true;
   const p = getPos(e);
+  currentStroke.points.push(p);
+  pendingPoints.push(p);
+  if (!flushScheduled) { flushScheduled = true; requestAnimationFrame(flushLivePoints); }
   ctx.lineTo(p.x, p.y);
   ctx.stroke();
 });
 
-canvas.addEventListener('mouseup', (e) => {
-  if (drawing && !hasMoved) {
-    const p = getPos(e);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, drawWidth() / 2, 0, Math.PI * 2);
-    ctx.fillStyle = drawColor();
-    ctx.fill();
-  }
+
+function finishStroke() {
+  if (!drawing) return;
   drawing = false;
-});
+  flushLivePoints(); // don't wait for the next animation frame — the stroke is over now
+  if (!currentStroke) return; // shouldn't happen
+  if (!hasMoved) strokeToCanvas(currentStroke); // single-point stroke draws as a dot
+  strokes.push(currentStroke);
+  broadcastStroke(currentStroke);
+  currentStroke = null;
+}
 
-canvas.addEventListener('mouseleave', () => { drawing = false; });
-window.addEventListener('resize', resizeCanvas);
+canvas.addEventListener('pointerup', finishStroke);
+canvas.addEventListener('pointercancel', finishStroke);
+// Don't listen for pointerleave! with setPointerCapture in
+// use, pointermove/pointerup/pointercancel already keep targeting the
+// canvas regardless of where the pointer physically is, but boundary events
+// like pointerleave still reflect the real hit-test
 
-resizeCanvas();
+initCanvas();
 
 bindInteractiveGuard();
 
@@ -219,7 +386,8 @@ window.addEventListener('beforeunload', () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Backspace')  { clearCanvas(); return; }
+  if (e.key === 'Backspace')  { manualClear(); return; }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); return; }
   if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); advance(); }
   if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp'   || e.key === 'k') retreat();
   if (e.key === 'n') _openPopup('/notes', 'Notes View', 'location,status,scrollbars,resizable,width=680,height=1080');
