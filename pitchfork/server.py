@@ -7,6 +7,7 @@ HTTP runs on `port`, WebSocket on `port + 1`.
 import asyncio
 import json
 import logging
+import socket
 from pathlib import Path
 from typing import Dict, Optional, Set, Tuple
 from urllib.parse import unquote
@@ -17,6 +18,16 @@ from websockets.server import WebSocketServerProtocol
 from pitchfork.layout_loader import DEFAULT_LAYOUT_NAME
 
 logger = logging.getLogger(__name__)
+
+def get_lan_ip() -> str:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
 
 # Everything the server knows how to hand back. 
 MIME_TYPES = {
@@ -95,6 +106,8 @@ class PitchforkServer:
         self.config: Dict = {}
         self._css_dir = Path(__file__).parent
         self.soundboard_json: str = "{}"
+        self.stage_w: int = 1920
+        self.stage_h: int = 1080
 
     # MARK: Public API
 
@@ -126,7 +139,7 @@ class PitchforkServer:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
                     continue
-                if msg.get("type") == "navigate":
+                if msg.get("type") in ("navigate", "draw-point", "draw-stroke", "undo", "clear"):
                     relay = json.dumps(msg)
                     await asyncio.gather(
                         *[c.send(relay) for c in list(self.clients) if c is not ws],
@@ -151,6 +164,8 @@ class PitchforkServer:
                .replace("__CHAPTERS_JSON__", self._safe_json(self.chapters_json))
                .replace("__WS_PORT__", str(self.port + 1))
                .replace("__SOUNDBOARD_JSON__", self._safe_json(self.soundboard_json))
+               .replace("__STAGE_W__", str(self.stage_w))
+               .replace("__STAGE_H__", str(self.stage_h))
                .encode("utf-8")
         )
 
@@ -276,10 +291,14 @@ class PitchforkServer:
         ws_server = await websockets.serve(
             self._ws_handler, self.host, self.port + 1
         )
+        
+        display_host = "localhost" if self.host == "0.0.0.0" else self.host
         print(f"\n   Endpoints:")
-        print(f"     Slides:    http://{self.host}:{self.port}/slides")
-        print(f"     Notes:     http://{self.host}:{self.port}/notes        Press 'n' in Slides view")
-        print(f"     Timer:     http://{self.host}:{self.port}/timer        Press 't' in Slides view")
+        print(f"     Slides:    http://{display_host}:{self.port}/slides")
+        if self.host == "0.0.0.0":
+            print(f"                http://{get_lan_ip()}:{self.port}/slides   (other devices on your LAN, e.g. an iPad)")
+        print(f"     Notes:     http://{display_host}:{self.port}/notes        Press 'n' in Slides view")
+        print(f"     Timer:     http://{display_host}:{self.port}/timer        Press 't' in Slides view")
         print(f"     (Ctrl+C to stop)\n")
         async with http_server, ws_server:
             await asyncio.Future()  # run until cancelled
