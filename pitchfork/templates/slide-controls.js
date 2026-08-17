@@ -10,21 +10,37 @@ function maxStep(idx) {
   return (slide && slide.steps) || 0;
 }
 
+// The deck's fixed logical resolution 
+// (from [export] resolution in .pitchfork), 
+// exposed as CSS custom properties on :root 
+// so both /slides (which scales #slide-container to this size) 
+// and /notes (whose thumbnail tricks need it to stay proportional)
+// agree on the same reference size
+const STAGE_W = __STAGE_W__;
+const STAGE_H = __STAGE_H__;
+document.documentElement.style.setProperty('--pf-stage-w', STAGE_W + 'px');
+document.documentElement.style.setProperty('--pf-stage-h', STAGE_H + 'px');
+
 let ws;
 // Set right before a reload we triggered ourselves, so pages with a
 // beforeunload handler (e.g. closing spawned popups) can tell it apart from
 // the user actually navigating away.
 let _reloading = false;
 
-// Opens the websocket and wires up the two message types every view handles
-// the same way: a remote navigate to stay in sync, and a reload broadcast
-// (deck/CSS/asset changed) to refresh in place.
+// Opens the websocket and wires up the message types every view handles the
+// same way: a remote navigate to stay in sync, a reload broadcast (deck/CSS/asset changed)
+// to refresh in place, and remote drawing/undo/clear (guarded, since only /slides defines these)
 function initSocket() {
   ws = new WebSocket(`ws://${location.hostname}:__WS_PORT__`);
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'navigate') applyRemoteNavigate(msg.index, msg.step);
     if (msg.type === 'reload') { _reloading = true; location.hash = '#' + current; location.reload(); }
+
+    if (msg.type === 'draw-point' && window.applyRemoteDrawPoint) applyRemoteDrawPoint(msg);
+    if (msg.type === 'draw-stroke' && window.applyRemoteStroke) applyRemoteStroke(msg.stroke);
+    if (msg.type === 'undo' && window.applyRemoteUndo) applyRemoteUndo();
+    if (msg.type === 'clear' && window.applyRemoteClear) applyRemoteClear();
   };
 }
 

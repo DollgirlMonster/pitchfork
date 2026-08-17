@@ -11,7 +11,7 @@ import webbrowser
 from pathlib import Path
 from typing import Optional
 
-from pitchfork.config import load_config
+from pitchfork.config import load_config, parse_resolution
 
 DEFAULT_CSS = """\
 /*  Pitchfork Styles
@@ -362,6 +362,8 @@ def cmd_serve(args):
     css_path = cwd / "styles.css"
     config = load_config(deck_path)
     default_layout = config.get("deck", {}).get("default_layout", DEFAULT_LAYOUT_NAME)
+    resolution = config.get("export", {}).get("resolution", "1080x720")
+    stage_w, stage_h = parse_resolution(resolution)
     port = args.port    # TODO: handle port in use; just go up 2 at a time until we find a free one
 
     # Initial parse
@@ -381,6 +383,8 @@ def cmd_serve(args):
     server = PitchforkServer(deck_path, css_path, host="localhost", port=port, cwd=cwd)
     server.default_layout = default_layout
     server.config = config
+    server.stage_w = stage_w
+    server.stage_h = stage_h
     server.set_slides_json(slides_json)
     server.set_chapters_json(chapters_json)
     server.set_soundboard_json(soundboard_json)
