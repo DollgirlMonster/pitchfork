@@ -1,12 +1,36 @@
 /* PITCHFORK /slides view
  */
 
-.view-slides { overflow: hidden; }
+/* Disable touch on slides for tablet palm reject */
+ .view-slides {
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 
-#slide-container {
-  position: relative;
+  & img {
+    -webkit-user-drag: none;
+  }
+}
+
+/* frame that centers the fixed-resolution stage inside whatever window it's actually shown in */
+#slide-viewport {
   width: 100vw;
   height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pf-bg); /* hide letterboxing */
+  overflow: hidden;
+}
+
+/* The stage itself: laid out at a fixed logical size and scaled uniformly via JS to fit #slide-viewport */
+#slide-container {
+  position: relative;
+  width: var(--pf-stage-w);
+  height: var(--pf-stage-h);
+  flex-shrink: 0;
+  background: var(--pf-bg);
 }
 
 #slide-content {
@@ -21,6 +45,7 @@
   height: 100%;
   cursor: crosshair;
   z-index: 100;
+  touch-action: none;
 }
 
 #slide-logo {

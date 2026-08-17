@@ -18,7 +18,7 @@ html, body { height: 100%; width: 100%; overflow: hidden; }
   --pf-font-header:   system-ui, sans-serif;
   --pf-font-code:     'JetBrains Mono', 'Fira Code', monospace;
   --pf-font-notes:    'Atkinson Hyperlegible', system-ui, sans-serif;
-  --pf-font-size:     clamp(1rem, 2.5vw, 2rem);
+  --pf-font-size:     2rem;
   --pf-strip-height:  180px;
   --pf-thumb-width:   240px;
 }
