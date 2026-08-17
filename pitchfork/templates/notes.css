@@ -164,3 +164,199 @@
 .task-list-item:hover {
   cursor: pointer;
 }
+
+/* MARK: Chapter jump overlay */
+
+#chapter-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: oklch(10% 0.01 240 / 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+
+#chapter-overlay.open {
+  display: flex;
+}
+
+#chapter-overlay-inner {
+  background: var(--pf-bg);
+  border: 1px solid var(--pf-border);
+  border-radius: 10px;
+  padding: 1.5rem 2rem;
+  min-width: 360px;
+  max-width: 560px;
+  width: 90vw;
+  box-shadow: 0 8px 32px oklch(0% 0 0 / 0.3);
+}
+
+#chapter-overlay-title {
+  font-family: var(--pf-font-code);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pf-muted);
+  margin-bottom: 1rem;
+}
+
+#chapter-overlay-hint {
+  font-family: var(--pf-font-code);
+  font-size: 0.65rem;
+  color: var(--pf-muted);
+  margin-top: 1rem;
+  opacity: 0.7;
+}
+
+.chapter-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.chapter-item:hover {
+  background: oklch(from var(--pf-accent) l c h / 0.08);
+}
+
+.chapter-item-num {
+  font-family: var(--pf-font-code);
+  font-size: 0.7rem;
+  color: var(--pf-accent);
+  min-width: 1.2rem;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.chapter-item-title {
+  font-family: var(--pf-font-body);
+  font-size: 1rem;
+  color: var(--pf-fg);
+  flex: 1;
+}
+
+.chapter-item-slide {
+  font-family: var(--pf-font-code);
+  font-size: 0.65rem;
+  color: var(--pf-muted);
+  flex-shrink: 0;
+}
+
+/* MARK: Slide overview (g) */
+
+#overview-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: oklch(10% 0.01 240 / 0.85);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  padding: 2rem;
+}
+
+#overview-overlay.open { display: block; }
+
+#overview-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+#overview-title,
+#overview-hint {
+  font-family: var(--pf-font-code);
+  color: var(--pf-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+#overview-hint {
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.7;
+  margin-top: 0.75rem;
+}
+
+#overview-grid {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--pf-thumb-width), 1fr));
+  gap: 1.5rem;
+  align-content: start;
+}
+
+/* Chapter headings break the flow across the full width of the grid. */
+.overview-chapter {
+  grid-column: 1 / -1;
+  font-family: var(--pf-font-code);
+  font-size: 0.7rem;
+  color: var(--pf-accent);
+  letter-spacing: 0.06em;
+  padding: 0.75rem 0 0.25rem;
+}
+
+.overview-chapter:first-child { padding-top: 0; }
+
+.overview-cell {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  /* Not overflow:hidden here: this is a grid item sized purely by
+     aspect-ratio (no in-flow content), and overflow:hidden collapses its
+     contribution to the grid's auto row-track sizing, making rows overlap.
+     .overview-thumb below does the actual clipping instead. */
+  cursor: pointer;
+  background: var(--pf-bg);
+  transition: border-color 0.15s;
+}
+
+.overview-cell:hover:not(.active) { border-color: var(--pf-muted); }
+
+.overview-cell.active {
+  border-color: var(--pf-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pf-accent) 25%, transparent);
+}
+
+.overview-thumb {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+/* Same trick as the strip thumbnails: render the slide at 4x and scale it
+   down, so text stays proportional instead of reflowing at thumbnail size. */
+.overview-thumb-inner {
+  position: absolute;
+  inset: 0;
+  transform-origin: top left;
+  transform: scale(0.25);
+  width: 400%;
+  height: 400%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.overview-num {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 0.65rem;
+  color: var(--pf-muted);
+  font-family: var(--pf-font-code);
+  background: rgba(255,255,255,0.8);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
