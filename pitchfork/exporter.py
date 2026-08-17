@@ -11,7 +11,7 @@ import shutil
 import sys
 import tempfile
 
-from pitchfork.config import load_config
+from pitchfork.config import load_config, parse_resolution
 
 
 def _embed_local_images(html: str, deck_dir: Path) -> str:
@@ -68,10 +68,7 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
     resolution     = ex_cfg.get("resolution", "1080x720")
     dpi            = float(ex_cfg.get("dpi", 96.0))
 
-    try:
-        w, h = map(int, resolution.split("x"))
-    except Exception:
-        w, h = 1920, 1080
+    w, h = parse_resolution(resolution)
 
     source = deck_path.read_text(encoding="utf-8")
     init_layouts(deck_path, cwd=Path.cwd(), default_layout=default_layout)
