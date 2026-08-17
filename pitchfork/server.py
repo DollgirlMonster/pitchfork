@@ -160,7 +160,7 @@ class PitchforkServer:
             body = self.css_path.read_bytes() if self.css_path.exists() else b""
             return body, "text/css"
         if path == "/pitchfork.css":
-            _CSS_PARTIALS = ["base.css", "layouts.css", "slides.css", "notes.css", "presenter.css"]
+            _CSS_PARTIALS = ["base.css", "layouts.css", "slides.css", "notes.css"]
             body = b"\n".join(((self._css_dir / "templates" / p).read_bytes() for p in _CSS_PARTIALS))
             return body, "text/css"
 
@@ -194,7 +194,7 @@ class PitchforkServer:
     async def _http_handler(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
-        from pitchfork.templates import SLIDES_PAGE, NOTES_PAGE, PRESENTER_PAGE, TIMER_PAGE
+        from pitchfork.templates import SLIDES_PAGE, NOTES_PAGE, TIMER_PAGE
 
         try:
             raw = await asyncio.wait_for(reader.read(8192), timeout=10.0)
@@ -228,7 +228,6 @@ class PitchforkServer:
             "/": SLIDES_PAGE,
             "/slides": SLIDES_PAGE,
             "/notes": NOTES_PAGE,
-            "/presenter": PRESENTER_PAGE,
             "/timer": TIMER_PAGE,
         }
 
@@ -280,7 +279,6 @@ class PitchforkServer:
         print(f"\n   Endpoints:")
         print(f"     Slides:    http://{self.host}:{self.port}/slides")
         print(f"     Notes:     http://{self.host}:{self.port}/notes        Press 'n' in Slides view")
-        print(f"     Presenter: http://{self.host}:{self.port}/presenter    Press 'p' in Slides view")
         print(f"     Timer:     http://{self.host}:{self.port}/timer        Press 't' in Slides view")
         print(f"     (Ctrl+C to stop)\n")
         async with http_server, ws_server:

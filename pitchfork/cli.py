@@ -66,7 +66,7 @@ EXAMPLE_DECK = """\
 
 %%%
 - Notes are optional -- just put them under a `%%%` separator.
-- They won't show in the slides, but you can see them in presenter view by pressing 'n' or 'p'
+- They won't show in the slides, but you can see them in notes view by pressing 'n'
     - But you may already know that
 
 ---

@@ -204,7 +204,7 @@ resizeCanvas();
 
 bindInteractiveGuard();
 
-// Track all spawned popup windows so they can be closed when presenter view closes
+// Track all spawned popup windows so they can be closed when this view does
 const _spawnedWindows = [];
 
 function _openPopup(url, name, features) {
@@ -222,7 +222,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Backspace')  { clearCanvas(); return; }
   if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); advance(); }
   if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp'   || e.key === 'k') retreat();
-  if (e.key === 'p') _openPopup('/presenter', 'Presenter View', 'location,status,scrollbars,resizable,width=1080,height=720');
   if (e.key === 'n') _openPopup('/notes', 'Notes View', 'location,status,scrollbars,resizable,width=680,height=1080');
   if (e.key === 't') _openPopup('/timer', 'Timer', 'width=300,height=240');
 });

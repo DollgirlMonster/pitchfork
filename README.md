@@ -107,17 +107,31 @@ pitchfork serve [file.md]        Serve with live reload (auto-discovers if omitt
               [--no-open]        Don't open browser automatically
 pitchfork export <file.md>       Export to PDF (requires playwright)
                  [--html]        Export as self-contained HTML folder
+pitchfork doctor [file.md]       Check decks for things that fail quietly
+                                 (checks every deck in the project if omitted)
 ```
 
 ## Views
 
 | URL | Description |
 |---|---|
-| `/slides` | Fullscreen current slide. `←`/`→` or `j`/`k` to navigate. `p` opens presenter view, `n` opens notes view, `t` pops out a timer widget; see below for more info. |
-| `/notes` | Slide strip + full notes panel. Synced with slides view. Press `c` to open the chapter jump menu. |
-| `/presenter` | Current slide, next slide, notes, and stopwatch. Press `c` to open the chapter jump menu. |
+| `/slides` | Fullscreen current slide — this is the one your audience sees. `←`/`→` or `j`/`k` to navigate. |
+| `/notes` | Slide strip + full notes panel. This is the view to present from. |
+| `/timer` | A countdown timer, embeddable in a slide or popped out on its own. |
 
-All views stay in sync via WebSocket.
+Both views stay in sync over a WebSocket, so you can drive from either one.
+
+### Keys
+
+| Key | | Where |
+|---|---|---|
+| `←` `→` `↑` `↓` `j` `k` `space` | Move through the deck, one reveal step at a time | both |
+| `n` | Pop out the notes view | slides |
+| `t` | Pop out the timer | both |
+| `c` | Chapter jump menu | notes |
+| `g` | Slide overview — every slide as a thumbnail, grouped by chapter; click one to jump | notes |
+| `backspace` | Clear anything you've drawn on the slide | slides |
+| `1`–`9` | Soundboard, if you've configured one | notes |
 
 ## Chapters
 
@@ -144,7 +158,7 @@ I recommend putting the closing `-->` on its own line, because as of this writin
 ## Live Demo
 ```
 
-A `§ Chapter Title` indicator appears in all views to help you and your audience keep track of where you are and what's next. Press `c` in `notes` or `presenter` view to open the chapter jump menu, where you can jump directly to any chapter.
+A `§ Chapter Title` indicator appears in all views to help you and your audience keep track of where you are and what's next. Press `c` in `notes` view to open the chapter jump menu, where you can jump directly to any chapter, or `g` for the slide overview, where slides are grouped under their chapter headings.
 
 ## Reveal Steps
 
@@ -355,7 +369,7 @@ You can add a logo to your deck for a touch of subtle branding. Place a `logo.pn
 
 ### Timer Widget
 
-Pitchfork exposes a countdown timer at the `/timer` endpoint. You can pop it out in presenter view with the `t` key, or embed it directly into your slides with an iframe.
+Pitchfork exposes a countdown timer at the `/timer` endpoint. You can pop it out from either view with the `t` key, or embed it directly into your slides with an iframe.
 
 `/timer` supports an optional `duration` query parameter to set the initial countdown time. You can use flexible time formats:
 
@@ -398,6 +412,70 @@ Add a `[soundboard]` section in your `.pitchfork` sidecar to define links to sou
 3 = "soundboard/Buzzer.mp3"
 7 = "soundboard/Mission Start.mp3"
 ```
+
+## Doctor
+
+Pitchfork is forgiving at render time on purpose: a missing image is just a
+broken image, an unknown layout name falls back to bare rendering, and a zone
+no layout uses simply doesn't appear. That's the right call in front of a room,
+but it means mistakes surface during class instead of at your desk.
+
+`pitchfork doctor` is where they surface early.
+
+```bash
+pitchfork doctor              # check every deck in the project
+pitchfork doctor slides.md    # check one deck
+```
+
+```
+  Session 14.md
+    ✗   160  missing media: img/wk14/dont-make-me-think.jpeg
+    !   176  empty QR target: ![QR]()
+            renders an empty QR code on the slide
+
+  TODO
+    ·   176  [comment]   Session 14.md: Add QR code linking to survey
+
+  1 error, 1 warning, 1 TODO across 14 decks.
+```
+
+With no filename, doctor checks every deck `serve` would offer you — so the two
+commands never disagree about what counts as a deck.
+
+If doctor itself crashes on a check, it says so and labels the finding a
+`doctor bug` rather than blaming your deck, and the remaining checks still run.
+Set `PITCHFORK_DOCTOR_STRICT=1` to get the traceback instead.
+
+It reports and never edits. `✗` marks things that are broken on the slide,
+`!` marks things that are probably not what you meant, and the TODO section
+lists every `TODO`/`FIXME` in your decks, tagged by where it lives:
+
+| Tag | Meaning |
+|---|---|
+| `[ON SLIDE]` | in slide content — your audience will read it |
+| `[notes]` | in speaker notes — only you see it |
+| `[comment]` | inside an HTML comment — invisible |
+
+`- [ ]` checkboxes are not treated as TODOs, since those are the step-by-step
+notes feature.
+
+What it looks for:
+
+| Check | |
+|---|---|
+| Missing images, media, and iframe sources | resolved the same way the server resolves them |
+| Unknown `::layout:name::` | falls back to bare rendering, silently |
+| Zone content no layout renders | `::left::` on a layout that only draws `slide.content` |
+| Layout that raises | shows the error before your audience does |
+| `::layout:` marker not on the slide's first line | ignored where it sits |
+| Unclosed HTML comments | a `<!--` closed with a bare `>` swallows the rest |
+| Malformed `/timer` query strings | `&duration=` silently falls back to 5 minutes |
+| More than one `%%%` in a slide | only the first splits notes |
+| Empty `[QR]()` targets and empty `<!-- MARK: -->` titles | |
+| Sidecar problems | bad `resolution`, soundboard slots outside 1–9, missing sound files, unknown `default_layout` |
+
+Examples inside fenced code blocks and `inline code` are skipped, so a deck that
+teaches Pitchfork syntax doesn't report itself.
 
 ## Export
 

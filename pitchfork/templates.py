@@ -1,5 +1,5 @@
 """
-HTML page templates for /slides, /notes, /presenter, and /timer views.
+HTML page templates for /slides, /notes, and /timer views.
 """
 
 from pathlib import Path
@@ -17,7 +17,6 @@ def _load(head_file: str, body_file: str, title: str, shared_nav_js: bool = Fals
     return head + "\n" + body
 
 # TODO: use the title (filename?) of the loaded slides.md for the page title
-SLIDES_PAGE    = _load("head.html", "slides.html",    "Pitchfork",           shared_nav_js=True)
-NOTES_PAGE     = _load("head.html", "notes.html",     "Pitchfork Notes",     shared_nav_js=True)
-PRESENTER_PAGE = _load("head.html", "presenter.html", "Pitchfork Presenter", shared_nav_js=True)
+SLIDES_PAGE    = _load("head.html", "slides.html",    "Pitchfork",       shared_nav_js=True)
+NOTES_PAGE     = _load("head.html", "notes.html",     "Pitchfork Notes", shared_nav_js=True)
 TIMER_PAGE     = _load("head.html", "timer.html",     "Pitchfork Timer")

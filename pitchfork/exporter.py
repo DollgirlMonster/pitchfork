@@ -91,7 +91,7 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
     tmpl_dir = pkg_dir / "templates"
 
     # Build CSS doc out of bitz
-    _CSS_PARTIALS = ["base.css", "layouts.css", "slides.css", "notes.css", "presenter.css"]
+    _CSS_PARTIALS = ["base.css", "layouts.css", "slides.css", "notes.css"]
     pitchfork_css = "\n".join(
         (tmpl_dir / name).read_text(encoding="utf-8") for name in _CSS_PARTIALS
     )

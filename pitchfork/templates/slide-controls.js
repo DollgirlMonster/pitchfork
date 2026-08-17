@@ -1,5 +1,5 @@
-// slide-controls.js — navigation & helpers shared by slides.html, presenter.html,
-// and notes.html. Each page defines its own `slides`, `chapters`, `current`,
+// slide-controls.js — navigation & helpers shared by slides.html and
+// notes.html. Each page defines its own `slides`, `chapters`, `current`,
 // `step`, and `ws`, plus a `render(movedSlide)` that skips rebuilding slide
 // content when `movedSlide` is false (a `--` reveal within the same slide);
 // the functions here only reference those globals when called, so load order

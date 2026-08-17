@@ -105,10 +105,8 @@ def render_slide_html(slide: Slide) -> str:
     """
     layout = resolve_layout(_layouts, slide, _default_layout_name)
     if layout is None:
-        # Catastrophic: not even the default_layout name loaded.
-        # Raw markdown beats a crash during a live presentation.
-        # Raise a warning in the console to let the user know during edit
-        print(f"!!Layout error: no layout found for slide {slide.index} (default_layout={_default_layout_name})")
+        # No match() claimed this slide (or its explicit marker didn't
+        # resolve) and the configured default_layout didn't load either.
         return f'<div class="slide-layout body">{md(slide.content)}</div>'
     try:
         # Layouts can request the full deck contents by declaring a `deck` param
