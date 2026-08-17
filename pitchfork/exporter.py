@@ -2,6 +2,7 @@
 Export utilities for Pitchfork
 """
 from pathlib import Path
+from typing import List
 import base64
 import mimetypes
 import os
@@ -9,18 +10,8 @@ import re
 import shutil
 import sys
 import tempfile
-try:
-    import tomllib  # type: ignore
-except Exception:
-    import tomli as tomllib  # type: ignore
 
-
-def load_config(deck_path: Path) -> dict:
-    sidecar = deck_path.parent / ".pitchfork"
-    if sidecar.exists():
-        with open(sidecar, "rb") as f:
-            return tomllib.load(f)
-    return {}
+from pitchfork.config import load_config
 
 
 def _embed_local_images(html: str, deck_dir: Path) -> str:
@@ -43,16 +34,17 @@ _MEASURE_SCALE_JS = (
 ).read_text(encoding="utf-8")
 
 
-def _build_slide_html(slide_html: str, css: str, head_tags: str,
+def _build_slide_html(slide_html: str, css_parts: List[str], head_tags: str,
                       logo_uri: str, index: int, total: int, title: str) -> str:
-    logo    = f'<img class="slide-logo" src="{logo_uri}" alt="logo">\n' if logo_uri else ""
-    counter = f'<div class="slide-counter">{index + 1} / {total}</div>'
+    logo       = f'<img class="slide-logo" src="{logo_uri}" alt="logo">\n' if logo_uri else ""
+    counter    = f'<div class="slide-counter">{index + 1} / {total}</div>'
+    style_tags = "".join(f"<style>{css}</style>" for css in css_parts)
     return (
         f'<!doctype html><html lang="en"><head>'
         f'<meta charset="utf-8">'
         f'<meta name="viewport" content="width=device-width,initial-scale=1">'
         f'<title>{title} — Slide {index + 1}</title>'
-        f'{head_tags}<style>{css}</style>'
+        f'{head_tags}{style_tags}'
         f'</head><body>'
         f'<div class="export-slide">{slide_html}\n{logo}{counter}</div>'
         f'</body></html>'
@@ -112,16 +104,25 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
 
     head_tags = (tmpl_dir / "exporter-head.html").read_text(encoding="utf-8")
 
-    full_css = f"{pitchfork_css}\n{user_css}\n{export_css}"
+    css_parts = [pitchfork_css, user_css, export_css]
 
     # ── HTML export ──────────────────────────────────────────────────────────
     if html:
         # Pull in vendor assets (highlight.js, qrcodejs, Google Fonts) and inline them as data URIs
-        from pitchfork.vendor import vendor_assets
+        from pitchfork.vendor import vendor_assets, last_failures
 
-        head_tags, full_css, added = vendor_assets(head_tags, full_css)
+        head_tags, css_parts, added = vendor_assets(head_tags, css_parts)
         if added > 0:
             print(f"  Embedded fonts, syntax highlighting, and QR rendering support (+{added // 1024} KB).")
+
+        failures = last_failures()
+        if failures:
+            print(f"  !  {len(failures)} asset{'s' if len(failures) != 1 else ''} couldn't be fetched "
+                  "and still point at the network:")
+            for url, reason in failures[:5]:
+                print(f"       {reason:12} {url}")
+            if len(failures) > 5:
+                print(f"       ...and {len(failures) - 5} more")
 
         parts = [f'<div class="export-slide">{render_slide_html(s)}</div>' for s in slides]
         slides_html = _embed_local_images("\n".join(parts), deck_path.parent)
@@ -132,13 +133,15 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
         html_nav_css = (tmpl_dir / "exporter-nav.css").read_text(encoding="utf-8")
         nav_script   = "<script>\n" + (tmpl_dir / "exporter-nav.js").read_text(encoding="utf-8") + "\n</script>"
 
+        style_tags = "".join(f"<style>{css}</style>" for css in [*css_parts, html_nav_css])
+
         out_html = deck_path.with_suffix(".html")
         out_html.write_text(
             f'<!doctype html><html lang="en"><head>'
             f'<meta charset="utf-8">'
             f'<meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<title>{deck_path.name} — Export</title>'
-            f'{head_tags}<style>{full_css}\n{html_nav_css}</style>'
+            f'{head_tags}{style_tags}'
             f'</head><body>\n{slides_html}\n{overlay}\n{nav_script}\n</body></html>',
             encoding="utf-8",
         )
@@ -172,7 +175,7 @@ def export_deck(deck_path: Path, html: bool = False) -> None:
             for i, s in enumerate(slides):
                 slide_html = _embed_local_images(render_slide_html(s), deck_path.parent)
                 page.set_content(
-                    _build_slide_html(slide_html, full_css, head_tags, logo_uri, i, total, deck_path.name),
+                    _build_slide_html(slide_html, css_parts, head_tags, logo_uri, i, total, deck_path.name),
                     wait_until="networkidle",
                 )
                 try:

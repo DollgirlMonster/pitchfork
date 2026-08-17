@@ -79,7 +79,7 @@ class TestExporter(unittest.TestCase):
             tmpdir = Path(tmpdir)
             deck = tmpdir / "deck.md"
             deck.write_text("# Slide\n\n```js\nconst a = 1;\n```\n")
-            vendor.reset_offline_flag()
+            vendor.begin_run()
             export_deck(deck, html=True)
             content = deck.with_suffix(".html").read_text(encoding="utf-8")
 
