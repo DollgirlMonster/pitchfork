@@ -246,7 +246,10 @@ class PitchforkServer:
             "/timer": TIMER_PAGE,
         }
 
-        if path in page_routes:
+        if path == "/chapters.json":
+            body = self.chapters_json.encode("utf-8")
+            ct = "application/json"
+        elif path in page_routes:
             if path == "/timer":
                 default_seconds = parse_duration(query_params.get("duration"))
                 html = TIMER_PAGE

@@ -64,5 +64,56 @@ class TestServerStatic(unittest.TestCase):
         self.assertIsNone(self.server._serve_static("/../etc/passwd"))
 
 
+class _FakeReader:
+    def __init__(self, data: bytes):
+        self._data = data
+
+    async def read(self, n):
+        return self._data
+
+
+class _FakeWriter:
+    def __init__(self):
+        self.chunks = []
+
+    def write(self, data):
+        self.chunks.append(data)
+
+    async def drain(self):
+        pass
+
+    def close(self):
+        pass
+
+    async def wait_closed(self):
+        pass
+
+    @property
+    def response(self):
+        return b"".join(self.chunks)
+
+
+class TestServerChaptersEndpoint(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory()
+        tmpdir_path = Path(self.tmpdir.name)
+        deck_path = tmpdir_path / "deck.md"
+        deck_path.write_text("# Deck")
+        css_path = tmpdir_path / "styles.css"
+        css_path.write_text("body {}")
+        self.server = PitchforkServer(deck_path, css_path, host="localhost", port=1234)
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    async def test_chapters_json_endpoint(self):
+        self.server.set_chapters_json('[{"index":0,"title":"Intro"}]')
+        reader = _FakeReader(b"GET /chapters.json HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        writer = _FakeWriter()
+        await self.server._http_handler(reader, writer)
+        self.assertIn(b"Content-Type: application/json", writer.response)
+        self.assertIn(b'[{"index":0,"title":"Intro"}]', writer.response)
+
+
 if __name__ == "__main__":
     unittest.main()
