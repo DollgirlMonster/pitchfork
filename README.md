@@ -192,7 +192,7 @@ After: 92%
 | Content | Layout |
 |---|---|
 | Only headings (≤2) | `title` |
-| Only a single heading | `section` |
+| Only headings (3+) | `section` |
 | `::left::` / `::right::` zones | `two-column` |
 | Mostly code blocks | `code` |
 | An image, then text | `image-left` |
