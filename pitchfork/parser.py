@@ -139,7 +139,7 @@ def parse_deck(source: str) -> List[Slide]:
 
         # Layout: explicit ::layout:name:: marker, or None (resolved at render time)
         layout = None
-        layout_marker = re.match(r"^::layout:([^\s:]+)::\s*$", slide_body, re.MULTILINE)
+        layout_marker = re.match(r"^::layout:([^\s:]+)::\s*$", slide_body, re.MULTILINE | re.IGNORECASE)
         if layout_marker:
             layout = layout_marker.group(1)
             slide_body = slide_body[layout_marker.end():].strip()
